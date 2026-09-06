@@ -1,0 +1,4 @@
+__pycache__/
+*.pyc
+flota.db
+.doc_review/

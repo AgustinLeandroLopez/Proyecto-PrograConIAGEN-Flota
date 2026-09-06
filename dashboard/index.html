@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Estado en tiempo real de la flota local" />
+  <title>Monitor de flota</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #07111f;
+      --panel: #101f31;
+      --panel-strong: #0b1929;
+      --line: #263d56;
+      --text: #f2f7fb;
+      --muted: #8ea4bb;
+      --cyan: #20b8d8;
+      --green: #39e59a;
+      --amber: #ffc857;
+      --red: #ff5d79;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: radial-gradient(circle at 90% 0%, rgba(32, 184, 216, .15), transparent 34rem), var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    body::before {
+      content: "";
+      display: block;
+      height: 5px;
+      background: linear-gradient(90deg, var(--cyan), rgba(32, 184, 216, .15));
+    }
+
+    main { width: min(1120px, calc(100% - 32px)); margin: 0 auto; padding: 30px 0 48px; }
+    header, .section-head, .vehicle-top, .live, .activity-copy { display: flex; align-items: center; }
+    header { justify-content: space-between; gap: 20px; margin-bottom: 22px; }
+    h1, h2, p { margin: 0; }
+
+    .kicker {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--cyan);
+      font-size: .74rem;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    h1 { font-size: clamp(1.75rem, 4vw, 2.5rem); letter-spacing: -.04em; }
+    h2 { font-size: 1.05rem; }
+    .subtitle, .timestamp { color: var(--muted); }
+    .subtitle { margin-top: 4px; }
+
+    .live {
+      gap: 9px;
+      padding: 9px 12px;
+      border: 1px solid rgba(57, 229, 154, .34);
+      border-radius: 999px;
+      color: var(--green);
+      background: rgba(57, 229, 154, .08);
+      font-size: .78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .live::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+      box-shadow: 0 0 0 5px rgba(57, 229, 154, .11);
+      animation: pulse 1.8s infinite;
+    }
+
+    .live.offline { color: var(--red); border-color: rgba(255, 93, 121, .34); background: rgba(255, 93, 121, .08); }
+    @keyframes pulse { 50% { box-shadow: 0 0 0 9px rgba(57, 229, 154, 0); } }
+
+    .activity {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 18px;
+      padding: 15px 17px;
+      border: 1px solid rgba(32, 184, 216, .36);
+      border-radius: 14px;
+      background: linear-gradient(90deg, rgba(32, 184, 216, .13), var(--panel));
+      transition: border-color 180ms ease, transform 180ms ease;
+    }
+
+    .activity.changed { border-color: var(--cyan); transform: translateY(-2px); }
+    .activity-copy { gap: 12px; }
+
+    .activity-icon {
+      display: grid;
+      place-items: center;
+      width: 38px;
+      height: 38px;
+      flex: 0 0 auto;
+      border-radius: 10px;
+      color: var(--cyan);
+      background: rgba(32, 184, 216, .13);
+      font-size: .72rem;
+      font-weight: 800;
+      letter-spacing: .05em;
+    }
+
+    .activity strong { display: block; font-size: .94rem; }
+    .activity-detail, .activity-time { color: var(--muted); font-size: .78rem; }
+    .tool-name { color: var(--cyan); font-weight: 700; }
+
+    .summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 26px; }
+    .metric { padding: 16px 18px; border: 1px solid var(--line); border-radius: 14px; background: rgba(16, 31, 49, .94); }
+    .metric-label { color: var(--muted); font-size: .82rem; }
+    .metric-value { display: block; margin-top: 4px; font-size: 1.65rem; font-weight: 760; font-variant-numeric: tabular-nums; }
+    .metric.alert .metric-value { color: var(--red); }
+
+    .section-head { justify-content: space-between; gap: 18px; margin-bottom: 13px; }
+    .timestamp { font-size: .8rem; }
+    .fleet-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+
+    .vehicle-card {
+      position: relative;
+      overflow: hidden;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      background: var(--panel);
+      transition: transform 180ms ease, border-color 180ms ease;
+    }
+
+    .vehicle-card:hover { transform: translateY(-2px); }
+    .vehicle-card.alert { border-color: rgba(255, 93, 121, .67); }
+    .vehicle-card.alert::before, .vehicle-card.recent::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 4px; background: var(--red); }
+    .vehicle-card.recent { border-color: rgba(32, 184, 216, .75); background: linear-gradient(110deg, rgba(32, 184, 216, .09), var(--panel)); }
+    .vehicle-card.recent::before { background: var(--cyan); }
+    .vehicle-top { justify-content: space-between; gap: 12px; }
+    .plate { font-size: 1.12rem; font-weight: 800; letter-spacing: .06em; }
+    .vehicle-meta { margin-top: 2px; color: var(--muted); font-size: .78rem; }
+
+    .status-pill {
+      padding: 6px 9px;
+      border-radius: 999px;
+      color: var(--green);
+      background: rgba(57, 229, 154, .1);
+      font-size: .74rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .status-pill.stopped { color: var(--amber); background: rgba(255, 200, 87, .11); }
+    .status-pill.alert { color: var(--red); background: rgba(255, 93, 121, .11); }
+    .status-pill.recent { color: var(--cyan); background: rgba(32, 184, 216, .11); }
+    .vehicle-data { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-top: 14px; }
+    .datum { padding: 11px 12px; border-radius: 10px; background: var(--panel-strong); }
+    .datum span { display: block; color: var(--muted); font-size: .76rem; }
+    .datum strong { display: block; margin-top: 2px; font-size: 1rem; }
+    .vehicle-card.alert .datum:last-child strong { color: var(--red); }
+
+    .message { grid-column: 1 / -1; padding: 20px; border: 1px solid var(--line); border-radius: 14px; color: var(--muted); background: var(--panel); text-align: center; }
+    .message.error { color: #ffb0bd; border-color: rgba(255, 93, 121, .55); }
+
+    @media (max-width: 760px) {
+      .summary { grid-template-columns: 1fr 1fr; }
+      .fleet-grid { grid-template-columns: 1fr; }
+      .activity { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 520px) {
+      main { width: min(100% - 22px, 1120px); padding-top: 22px; }
+      header { align-items: flex-start; flex-direction: column; }
+      .metric { padding: 14px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before { animation: none !important; transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <span class="kicker">Centro de control</span>
+        <h1>Monitor de flota</h1>
+        <p class="subtitle">Estado operativo en tiempo real</p>
+      </div>
+      <div class="live" id="connection">Sincronización automática</div>
+    </header>
+
+    <section class="activity" id="activity" aria-live="polite">
+      <div class="activity-copy">
+        <span class="activity-icon" aria-hidden="true">MCP</span>
+        <div>
+          <strong id="activity-title">Monitor Fijo - Cambios desde el MCP </strong>
+        </div>
+      </div>
+    </section>
+
+    <section class="summary" aria-label="Resumen de la flota">
+      <article class="metric"><span class="metric-label">Vehículos</span><strong class="metric-value" id="total">—</strong></article>
+      <article class="metric"><span class="metric-label">En movimiento</span><strong class="metric-value" id="moving">—</strong></article>
+      <article class="metric"><span class="metric-label">Detenidos</span><strong class="metric-value" id="stopped">—</strong></article>
+      <article class="metric alert"><span class="metric-label">Alertas activas</span><strong class="metric-value" id="alerts">—</strong></article>
+    </section>
+
+    <div class="section-head">
+      <h2>Estado de los vehículos</h2>
+      <span class="timestamp" id="updated">Conectando…</span>
+    </div>
+
+    <section class="fleet-grid" id="fleet" aria-live="polite">
+      <div class="message">Cargando estado de la flota…</div>
+    </section>
+  </main>
+
+  <script>
+    const fleet = document.querySelector("#fleet");
+    const activity = document.querySelector("#activity");
+    const connection = document.querySelector("#connection");
+    const formatter = new Intl.DateTimeFormat("es-AR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    let previousVehicles = null;
+    let recentVehicleId = null;
+    let recentUntil = 0;
+
+    function escapeHtml(value) {
+      const element = document.createElement("span");
+      element.textContent = String(value);
+      return element.innerHTML;
+    }
+
+    function showActivity(title, toolName) {
+      document.querySelector("#activity-title").textContent = title;
+      document.querySelector("#activity-detail").innerHTML = `Cambio detectado mediante <span class="tool-name">${escapeHtml(toolName)}</span>`;
+      document.querySelector("#activity-time").textContent = "ahora";
+      activity.classList.add("changed");
+      window.setTimeout(() => activity.classList.remove("changed"), 1800);
+    }
+
+    function detectChanges(vehicles) {
+      if (previousVehicles === null) {
+        previousVehicles = new Map(vehicles.map((vehicle) => [vehicle.id, vehicle]));
+        return;
+      }
+
+      const current = new Map(vehicles.map((vehicle) => [vehicle.id, vehicle]));
+      const added = vehicles.find((vehicle) => !previousVehicles.has(vehicle.id));
+
+      if (added) {
+        recentVehicleId = added.id;
+        recentUntil = Date.now() + 10000;
+        showActivity(`${added.patente} fue agregado a la flota`, "agregar_vehiculo");
+      } else {
+        const changed = vehicles.find((vehicle) => {
+          const previous = previousVehicles.get(vehicle.id);
+          return previous && (previous.velocidad !== vehicle.velocidad || previous.minutos_detenido !== vehicle.minutos_detenido || previous.patente !== vehicle.patente);
+        });
+
+        if (changed) {
+          recentVehicleId = changed.id;
+          recentUntil = Date.now() + 10000;
+          showActivity(`${changed.patente} actualizó su estado`, "actualizar_estado_vehiculo");
+        }
+      }
+
+      previousVehicles = current;
+    }
+
+    function renderVehicle(vehicle) {
+      const moving = Number(vehicle.velocidad) > 0;
+      const recent = vehicle.id === recentVehicleId && Date.now() < recentUntil;
+      const cardClasses = ["vehicle-card"];
+      if (vehicle.alerta) cardClasses.push("alert");
+      if (recent) cardClasses.push("recent");
+
+      let statusClass = vehicle.alerta ? "alert" : moving ? "" : "stopped";
+      let statusLabel = vehicle.alerta ? "Alerta" : moving ? "En movimiento" : "Detenido";
+      if (recent) {
+        statusClass = "recent";
+        statusLabel = "Cambio por MCP";
+      }
+
+      return `
+        <article class="${cardClasses.join(" ")}">
+          <div class="vehicle-top">
+            <div>
+              <div class="plate">${escapeHtml(vehicle.patente)}</div>
+              <div class="vehicle-meta">Vehículo ${escapeHtml(vehicle.id)}</div>
+            </div>
+            <span class="status-pill ${statusClass}">${statusLabel}</span>
+          </div>
+          <div class="vehicle-data">
+            <div class="datum"><span>Velocidad</span><strong>${escapeHtml(vehicle.velocidad)} km/h</strong></div>
+            <div class="datum"><span>Tiempo detenido</span><strong>${escapeHtml(vehicle.minutos_detenido)} min</strong></div>
+          </div>
+        </article>`;
+    }
+
+    async function refresh() {
+      try {
+        const response = await fetch("/api/vehiculos", { cache: "no-store" });
+        if (!response.ok) throw new Error("No se pudo consultar el estado");
+        const data = await response.json();
+        connection.textContent = "Sincronización automática";
+        connection.classList.remove("offline");
+        detectChanges(data.vehiculos);
+        document.querySelector("#total").textContent = data.resumen.total;
+        document.querySelector("#moving").textContent = data.resumen.en_movimiento;
+        document.querySelector("#stopped").textContent = data.resumen.detenidos;
+        document.querySelector("#alerts").textContent = data.resumen.alertas;
+        document.querySelector("#updated").textContent = `Actualizado ${formatter.format(new Date(data.actualizado))}`;
+        fleet.innerHTML = data.vehiculos.length ? data.vehiculos.map(renderVehicle).join("") : '<div class="message">No hay vehículos registrados.</div>';
+      } catch (error) {
+        connection.textContent = "Sin conexión";
+        connection.classList.add("offline");
+        document.querySelector("#updated").textContent = "Sin conexión";
+        fleet.innerHTML = `<div class="message error">${escapeHtml(error.message)}. Reintentando…</div>`;
+      }
+    }
+
+    refresh();
+    window.setInterval(refresh, 2000);
+  </script>
+</body>
+</html>
