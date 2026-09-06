@@ -4,6 +4,8 @@ Proyecto desarrollado para demostrar un proceso progresivo de análisis y refact
 
 La versión actual obtiene los vehículos desde una base de datos local SQLite y conserva la misma lógica de alertas y salida por consola de la versión inicial.
 
+Repositorio: [AgustinLeandroLopez/Proyecto-PrograConIAGEN-Flota](https://github.com/AgustinLeandroLopez/Proyecto-PrograConIAGEN-Flota)
+
 ## Documentación del proyecto
 
 - [`AGENTS.md`](AGENTS.md): contexto e instrucciones que Codex carga al trabajar en el repositorio.
