@@ -83,30 +83,8 @@ python dashboard.py
 
 Luego abrir `http://127.0.0.1:8000`. La página consulta la base local cada dos segundos, por lo que refleja automáticamente las actualizaciones realizadas mediante las herramientas MCP.
 
-Para demostrar la integración, mantener el dashboard abierto y pedirle a Codex:
-
-> Usá la herramienta `agregar_vehiculo` del MCP `monitor_flota` para agregar un vehículo con patente JKL012, velocidad 25 km/h y 0 minutos detenido. Después consultá la flota para verificarlo.
-
-El vehículo nuevo aparecerá automáticamente en el dashboard. También se puede demostrar una actualización:
-
-> Usá el MCP `monitor_flota` para actualizar el vehículo con ID 2: velocidad 0 y 40 minutos detenido. Después consultá nuevamente las alertas.
-
-El vehículo `DEF456` aparecerá en alerta en el dashboard. Al terminar, restaurarlo a velocidad 0 y 15 minutos detenido.
-
-Para marcarlo disponible y esperando una asignación:
-
-> Usá el MCP `monitor_flota` para actualizar el vehículo con ID 2: velocidad 0, 45 minutos detenido y `esperando_viaje` en true. Después consultá las alertas para verificar que no aparezca.
-
 ## Pruebas
 
 ```powershell
 python -m unittest -v test_servidor_mcp.py
 ```
-
-## Flujo sugerido para la demostración
-
-1. Pedir al agente que consulte las alertas de la flota.
-2. Solicitar que actualice el vehículo 2 para dejarlo detenido durante 40 minutos.
-3. Pedir nuevamente las alertas y verificar que el vehículo 2 aparezca en el resultado.
-4. Marcarlo esperando viaje y verificar que deja de aparecer entre las alertas.
-5. Restaurar el vehículo 2 a su estado inicial.
