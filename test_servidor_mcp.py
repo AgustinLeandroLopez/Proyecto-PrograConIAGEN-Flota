@@ -1,8 +1,11 @@
 import json
+import sqlite3
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
+import database
 from mcp import Client, StdioServerParameters
 
 from database import conectar
@@ -70,6 +73,7 @@ class ServidorMCPTest(unittest.IsolatedAsyncioTestCase):
                         "patente": patente.lower(),
                         "velocidad": 35,
                         "minutos_detenido": 0,
+                        "esperando_viaje": False,
                     },
                 )
 
@@ -108,6 +112,7 @@ class ServidorMCPTest(unittest.IsolatedAsyncioTestCase):
                         "vehiculo_id": 2,
                         "velocidad": 25,
                         "minutos_detenido": 0,
+                        "esperando_viaje": False,
                     },
                 )
                 vehiculo_actualizado = obtener_resultado_estructurado(resultado)
@@ -122,8 +127,169 @@ class ServidorMCPTest(unittest.IsolatedAsyncioTestCase):
                         "vehiculo_id": 2,
                         "velocidad": vehiculo_anterior["velocidad"],
                         "minutos_detenido": vehiculo_anterior["minutos_detenido"],
+                        "esperando_viaje": vehiculo_anterior["esperando_viaje"],
                     },
                 )
+
+    async def test_esperando_viaje_no_genera_alertas_y_vuelve_a_reglas_normales(self):
+        async with Client(mcp, raise_exceptions=True) as cliente:
+            estado_anterior = await cliente.call_tool(
+                "consultar_estado_vehiculo",
+                {"vehiculo_id": 2},
+            )
+            vehiculo_anterior = obtener_resultado_estructurado(estado_anterior)
+
+            try:
+                esperando_menos_de_30 = await cliente.call_tool(
+                    "actualizar_estado_vehiculo",
+                    {
+                        "vehiculo_id": 2,
+                        "velocidad": 0,
+                        "minutos_detenido": 15,
+                        "esperando_viaje": True,
+                    },
+                )
+                vehiculo = obtener_resultado_estructurado(esperando_menos_de_30)
+                self.assertTrue(vehiculo["esperando_viaje"])
+                self.assertIn("esperando viaje", vehiculo["estado"])
+
+                esperando_mas_de_30 = await cliente.call_tool(
+                    "actualizar_estado_vehiculo",
+                    {
+                        "vehiculo_id": 2,
+                        "velocidad": 0,
+                        "minutos_detenido": 45,
+                        "esperando_viaje": True,
+                    },
+                )
+                vehiculo = obtener_resultado_estructurado(esperando_mas_de_30)
+                self.assertTrue(vehiculo["esperando_viaje"])
+                self.assertIn("esperando viaje", vehiculo["estado"])
+
+                alertas = await cliente.call_tool("consultar_alertas", {})
+                self.assertNotIn(
+                    2,
+                    [alerta["id"] for alerta in obtener_resultado_estructurado(alertas)],
+                )
+
+                fuera_de_espera = await cliente.call_tool(
+                    "actualizar_estado_vehiculo",
+                    {
+                        "vehiculo_id": 2,
+                        "velocidad": 0,
+                        "minutos_detenido": 45,
+                        "esperando_viaje": False,
+                    },
+                )
+                vehiculo = obtener_resultado_estructurado(fuera_de_espera)
+                self.assertFalse(vehiculo["esperando_viaje"])
+                self.assertIn("ALERTA", vehiculo["estado"])
+            finally:
+                await cliente.call_tool(
+                    "actualizar_estado_vehiculo",
+                    {
+                        "vehiculo_id": 2,
+                        "velocidad": vehiculo_anterior["velocidad"],
+                        "minutos_detenido": vehiculo_anterior["minutos_detenido"],
+                        "esperando_viaje": vehiculo_anterior["esperando_viaje"],
+                    },
+                )
+
+    async def test_velocidad_positiva_desactiva_esperando_viaje(self):
+        async with Client(mcp, raise_exceptions=True) as cliente:
+            estado_anterior = await cliente.call_tool(
+                "consultar_estado_vehiculo",
+                {"vehiculo_id": 2},
+            )
+            vehiculo_anterior = obtener_resultado_estructurado(estado_anterior)
+
+            try:
+                resultado = await cliente.call_tool(
+                    "actualizar_estado_vehiculo",
+                    {
+                        "vehiculo_id": 2,
+                        "velocidad": 20,
+                        "minutos_detenido": 0,
+                        "esperando_viaje": True,
+                    },
+                )
+                vehiculo = obtener_resultado_estructurado(resultado)
+                self.assertFalse(vehiculo["esperando_viaje"])
+                self.assertIn("movimiento", vehiculo["estado"])
+            finally:
+                await cliente.call_tool(
+                    "actualizar_estado_vehiculo",
+                    {
+                        "vehiculo_id": 2,
+                        "velocidad": vehiculo_anterior["velocidad"],
+                        "minutos_detenido": vehiculo_anterior["minutos_detenido"],
+                        "esperando_viaje": vehiculo_anterior["esperando_viaje"],
+                    },
+                )
+
+    async def test_agregar_vehiculo_esperando_viaje(self):
+        patente = "MCP888"
+        with conectar() as conexion:
+            conexion.execute("DELETE FROM vehiculos WHERE patente = ?", (patente,))
+
+        try:
+            async with Client(mcp, raise_exceptions=True) as cliente:
+                resultado = await cliente.call_tool(
+                    "agregar_vehiculo",
+                    {
+                        "patente": patente,
+                        "velocidad": 0,
+                        "minutos_detenido": 45,
+                        "esperando_viaje": True,
+                    },
+                )
+
+            vehiculo = obtener_resultado_estructurado(resultado)
+            self.assertTrue(vehiculo["esperando_viaje"])
+            self.assertIn("esperando viaje", vehiculo["estado"])
+        finally:
+            with conectar() as conexion:
+                conexion.execute("DELETE FROM vehiculos WHERE patente = ?", (patente,))
+
+
+class MigracionBaseDeDatosTest(unittest.TestCase):
+    def test_migra_base_existente_sin_perder_vehiculos(self):
+        ruta_original = database.RUTA_BASE_DATOS
+        with tempfile.TemporaryDirectory() as directorio_temporal:
+            ruta_prueba = Path(directorio_temporal) / "flota_antigua.db"
+            conexion = sqlite3.connect(ruta_prueba)
+            conexion.execute(
+                """
+                CREATE TABLE vehiculos (
+                    id INTEGER PRIMARY KEY,
+                    patente TEXT NOT NULL UNIQUE,
+                    velocidad REAL NOT NULL CHECK (velocidad >= 0),
+                    minutos_detenido INTEGER NOT NULL CHECK (minutos_detenido >= 0)
+                )
+                """
+            )
+            conexion.execute(
+                """
+                INSERT INTO vehiculos (id, patente, velocidad, minutos_detenido)
+                VALUES (99, 'MIG999', 0, 45)
+                """
+            )
+            conexion.commit()
+            conexion.close()
+
+            try:
+                database.RUTA_BASE_DATOS = ruta_prueba
+                database.inicializar_base_de_datos()
+                vehiculo = database.consultar_vehiculo(99)
+                self.assertEqual(vehiculo["patente"], "MIG999")
+                self.assertEqual(vehiculo["velocidad"], 0)
+                self.assertEqual(vehiculo["minutos_detenido"], 45)
+                self.assertFalse(vehiculo["esperando_viaje"])
+
+                database.inicializar_base_de_datos()
+                self.assertEqual(database.consultar_vehiculo(99)["patente"], "MIG999")
+            finally:
+                database.RUTA_BASE_DATOS = ruta_original
 
 
 if __name__ == "__main__":

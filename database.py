@@ -34,10 +34,24 @@ def inicializar_base_de_datos():
                 id INTEGER PRIMARY KEY,
                 patente TEXT NOT NULL UNIQUE,
                 velocidad REAL NOT NULL CHECK (velocidad >= 0),
-                minutos_detenido INTEGER NOT NULL CHECK (minutos_detenido >= 0)
+                minutos_detenido INTEGER NOT NULL CHECK (minutos_detenido >= 0),
+                esperando_viaje INTEGER NOT NULL DEFAULT 0
+                    CHECK (esperando_viaje IN (0, 1))
             )
             """
         )
+        columnas = {
+            fila["name"]
+            for fila in conexion.execute("PRAGMA table_info(vehiculos)").fetchall()
+        }
+        if "esperando_viaje" not in columnas:
+            conexion.execute(
+                """
+                ALTER TABLE vehiculos
+                ADD COLUMN esperando_viaje INTEGER NOT NULL DEFAULT 0
+                    CHECK (esperando_viaje IN (0, 1))
+                """
+            )
         conexion.executemany(
             """
             INSERT OR IGNORE INTO vehiculos
@@ -52,52 +66,58 @@ def consultar_vehiculos():
     with conectar() as conexion:
         filas = conexion.execute(
             """
-            SELECT id, patente, velocidad, minutos_detenido
+            SELECT id, patente, velocidad, minutos_detenido, esperando_viaje
             FROM vehiculos
             ORDER BY id
             """
         ).fetchall()
 
-    return [dict(fila) for fila in filas]
+    return [_convertir_vehiculo(fila) for fila in filas]
 
 
 def consultar_vehiculo(vehiculo_id):
     with conectar() as conexion:
         fila = conexion.execute(
             """
-            SELECT id, patente, velocidad, minutos_detenido
+            SELECT id, patente, velocidad, minutos_detenido, esperando_viaje
             FROM vehiculos
             WHERE id = ?
             """,
             (vehiculo_id,),
         ).fetchone()
 
-    return dict(fila) if fila else None
+    return _convertir_vehiculo(fila) if fila else None
 
 
-def actualizar_estado_vehiculo(vehiculo_id, velocidad, minutos_detenido):
+def actualizar_estado_vehiculo(
+    vehiculo_id,
+    velocidad,
+    minutos_detenido,
+    esperando_viaje,
+):
     with conectar() as conexion:
         cursor = conexion.execute(
             """
             UPDATE vehiculos
-            SET velocidad = ?, minutos_detenido = ?
+            SET velocidad = ?, minutos_detenido = ?, esperando_viaje = ?
             WHERE id = ?
             """,
-            (velocidad, minutos_detenido, vehiculo_id),
+            (velocidad, minutos_detenido, int(esperando_viaje), vehiculo_id),
         )
 
     return cursor.rowcount > 0
 
 
-def agregar_vehiculo(patente, velocidad, minutos_detenido):
+def agregar_vehiculo(patente, velocidad, minutos_detenido, esperando_viaje=False):
     with conectar() as conexion:
         try:
             cursor = conexion.execute(
                 """
-                INSERT INTO vehiculos (patente, velocidad, minutos_detenido)
-                VALUES (?, ?, ?)
+                INSERT INTO vehiculos
+                    (patente, velocidad, minutos_detenido, esperando_viaje)
+                VALUES (?, ?, ?, ?)
                 """,
-                (patente, velocidad, minutos_detenido),
+                (patente, velocidad, minutos_detenido, int(esperando_viaje)),
             )
         except sqlite3.IntegrityError:
             return None
@@ -105,3 +125,9 @@ def agregar_vehiculo(patente, velocidad, minutos_detenido):
         vehiculo_id = cursor.lastrowid
 
     return consultar_vehiculo(vehiculo_id)
+
+
+def _convertir_vehiculo(fila):
+    vehiculo = dict(fila)
+    vehiculo["esperando_viaje"] = bool(vehiculo["esperando_viaje"])
+    return vehiculo

@@ -17,13 +17,15 @@
 ## Reglas de la flota
 
 - Un vehículo está en alerta cuando su velocidad es 0 y lleva más de 30 minutos detenido.
+- Un vehículo con `esperando_viaje` activo debe tener velocidad 0 y no genera alerta, aunque supere los 30 minutos detenido.
+- Si un vehículo pasa a tener velocidad mayor que 0, `esperando_viaje` se desactiva automáticamente.
 - Una patente identifica de forma única a un vehículo.
 - La velocidad y los minutos detenido no pueden ser negativos.
 
 ## Servidor MCP
 
 - El servidor se llama `monitor_flota` y usa transporte local `stdio`.
-- Herramientas disponibles: `consultar_vehiculos`, `consultar_estado_vehiculo`, `consultar_alertas`, `agregar_vehiculo` y `actualizar_estado_vehiculo`.
+- Herramientas disponibles: `consultar_vehiculos`, `consultar_estado_vehiculo`, `consultar_alertas`, `agregar_vehiculo` y `actualizar_estado_vehiculo`. Las dos herramientas de escritura administran el booleano `esperando_viaje`.
 - Para operaciones solicitadas por el usuario sobre la flota, preferir las herramientas MCP en lugar de modificar `flota.db` directamente.
 - Antes de agregar o actualizar datos, comprobar que el usuario haya pedido explícitamente la modificación.
 - Después de una escritura mediante MCP, verificar el resultado con una herramienta de consulta.

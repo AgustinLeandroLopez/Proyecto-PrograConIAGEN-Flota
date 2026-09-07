@@ -20,8 +20,8 @@ Repositorio: [AgustinLeandroLopez/Proyecto-PrograConIAGEN-Flota](https://github.
 ## Estructura actual
 
 - `main.py`: inicia el programa y coordina la consulta y presentación de los vehículos.
-- `database.py`: crea y consulta la base SQLite. También contiene funciones preparadas para consultar y actualizar un vehículo.
-- `monitor.py`: contiene la regla que determina el estado y la salida por consola.
+- `database.py`: crea, migra y consulta la base SQLite. También contiene funciones para consultar y actualizar un vehículo.
+- `monitor.py`: contiene las reglas que determinan el estado, las alertas y la salida por consola.
 - `servidor_mcp.py`: publica las operaciones de la flota como herramientas MCP.
 - `test_servidor_mcp.py`: verifica las herramientas mediante un cliente MCP en memoria.
 - `dashboard.py`: inicia un dashboard web local conectado a la misma base SQLite.
@@ -57,11 +57,13 @@ python versiones/02_primera_refactorizacion.py
 
 El servidor publica estas herramientas:
 
-- `consultar_vehiculos`: devuelve toda la flota y el estado calculado de cada vehículo.
+- `consultar_vehiculos`: devuelve toda la flota, el estado calculado y si cada vehículo espera viaje.
 - `consultar_estado_vehiculo`: consulta un vehículo por su identificador.
-- `consultar_alertas`: devuelve los vehículos detenidos más de 30 minutos.
-- `agregar_vehiculo`: incorpora un vehículo nuevo a la flota.
-- `actualizar_estado_vehiculo`: modifica la velocidad y los minutos detenido de un vehículo.
+- `consultar_alertas`: devuelve los vehículos detenidos más de 30 minutos que no esperan viaje.
+- `agregar_vehiculo`: incorpora un vehículo nuevo e incluye opcionalmente `esperando_viaje`.
+- `actualizar_estado_vehiculo`: modifica velocidad, minutos detenido y `esperando_viaje` de un vehículo. Velocidad y minutos siguen siendo obligatorios.
+
+`esperando_viaje` es un estado persistente para un vehículo detenido y disponible. Puede tener cualquier cantidad de minutos detenido sin generar una alerta. Si se actualiza con velocidad mayor que 0, el estado se desactiva automáticamente. Las bases existentes se actualizan en el inicio: se agrega la columna con valor `false` sin eliminar vehículos.
 
 El servidor utiliza transporte local `stdio`. Al ejecutarlo directamente queda esperando que un cliente MCP se conecte:
 
@@ -91,6 +93,10 @@ El vehículo nuevo aparecerá automáticamente en el dashboard. También se pued
 
 El vehículo `DEF456` aparecerá en alerta en el dashboard. Al terminar, restaurarlo a velocidad 0 y 15 minutos detenido.
 
+Para marcarlo disponible y esperando una asignación:
+
+> Usá el MCP `monitor_flota` para actualizar el vehículo con ID 2: velocidad 0, 45 minutos detenido y `esperando_viaje` en true. Después consultá las alertas para verificar que no aparezca.
+
 ## Pruebas
 
 ```powershell
@@ -102,4 +108,5 @@ python -m unittest -v test_servidor_mcp.py
 1. Pedir al agente que consulte las alertas de la flota.
 2. Solicitar que actualice el vehículo 2 para dejarlo detenido durante 40 minutos.
 3. Pedir nuevamente las alertas y verificar que el vehículo 2 aparezca en el resultado.
-4. Restaurar el vehículo 2 a su estado inicial.
+4. Marcarlo esperando viaje y verificar que deja de aparecer entre las alertas.
+5. Restaurar el vehículo 2 a su estado inicial.

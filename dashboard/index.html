@@ -17,6 +17,7 @@
       --cyan: #20b8d8;
       --green: #39e59a;
       --amber: #ffc857;
+      --purple: #bb86fc;
       --red: #ff5d79;
     }
 
@@ -117,11 +118,12 @@
     .activity-detail, .activity-time { color: var(--muted); font-size: .78rem; }
     .tool-name { color: var(--cyan); font-weight: 700; }
 
-    .summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 26px; }
+    .summary { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 26px; }
     .metric { padding: 16px 18px; border: 1px solid var(--line); border-radius: 14px; background: rgba(16, 31, 49, .94); }
     .metric-label { color: var(--muted); font-size: .82rem; }
     .metric-value { display: block; margin-top: 4px; font-size: 1.65rem; font-weight: 760; font-variant-numeric: tabular-nums; }
     .metric.alert .metric-value { color: var(--red); }
+    .metric.waiting .metric-value { color: var(--purple); }
 
     .section-head { justify-content: space-between; gap: 18px; margin-bottom: 13px; }
     .timestamp { font-size: .8rem; }
@@ -139,7 +141,10 @@
 
     .vehicle-card:hover { transform: translateY(-2px); }
     .vehicle-card.alert { border-color: rgba(255, 93, 121, .67); }
+    .vehicle-card.waiting { border-color: rgba(187, 134, 252, .62); }
     .vehicle-card.alert::before, .vehicle-card.recent::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 4px; background: var(--red); }
+    .vehicle-card.waiting::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 4px; background: var(--purple); }
+    .vehicle-card.waiting.recent::before { background: var(--cyan); }
     .vehicle-card.recent { border-color: rgba(32, 184, 216, .75); background: linear-gradient(110deg, rgba(32, 184, 216, .09), var(--panel)); }
     .vehicle-card.recent::before { background: var(--cyan); }
     .vehicle-top { justify-content: space-between; gap: 12px; }
@@ -157,6 +162,7 @@
     }
 
     .status-pill.stopped { color: var(--amber); background: rgba(255, 200, 87, .11); }
+    .status-pill.waiting { color: var(--purple); background: rgba(187, 134, 252, .13); }
     .status-pill.alert { color: var(--red); background: rgba(255, 93, 121, .11); }
     .status-pill.recent { color: var(--cyan); background: rgba(32, 184, 216, .11); }
     .vehicle-data { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-top: 14px; }
@@ -169,7 +175,7 @@
     .message.error { color: #ffb0bd; border-color: rgba(255, 93, 121, .55); }
 
     @media (max-width: 760px) {
-      .summary { grid-template-columns: 1fr 1fr; }
+      .summary { grid-template-columns: repeat(2, 1fr); }
       .fleet-grid { grid-template-columns: 1fr; }
       .activity { grid-template-columns: 1fr; }
     }
@@ -201,14 +207,17 @@
         <span class="activity-icon" aria-hidden="true">MCP</span>
         <div>
           <strong id="activity-title">Monitor Fijo - Cambios desde el MCP </strong>
+          <span class="activity-detail" id="activity-detail">Esperando cambios en la flota</span>
         </div>
       </div>
+      <span class="activity-time" id="activity-time">ahora</span>
     </section>
 
     <section class="summary" aria-label="Resumen de la flota">
       <article class="metric"><span class="metric-label">Vehículos</span><strong class="metric-value" id="total">—</strong></article>
       <article class="metric"><span class="metric-label">En movimiento</span><strong class="metric-value" id="moving">—</strong></article>
       <article class="metric"><span class="metric-label">Detenidos</span><strong class="metric-value" id="stopped">—</strong></article>
+      <article class="metric waiting"><span class="metric-label">Esperando viaje</span><strong class="metric-value" id="waiting">—</strong></article>
       <article class="metric alert"><span class="metric-label">Alertas activas</span><strong class="metric-value" id="alerts">—</strong></article>
     </section>
 
@@ -261,7 +270,7 @@
       } else {
         const changed = vehicles.find((vehicle) => {
           const previous = previousVehicles.get(vehicle.id);
-          return previous && (previous.velocidad !== vehicle.velocidad || previous.minutos_detenido !== vehicle.minutos_detenido || previous.patente !== vehicle.patente);
+          return previous && (previous.velocidad !== vehicle.velocidad || previous.minutos_detenido !== vehicle.minutos_detenido || previous.esperando_viaje !== vehicle.esperando_viaje || previous.patente !== vehicle.patente);
         });
 
         if (changed) {
@@ -279,14 +288,11 @@
       const recent = vehicle.id === recentVehicleId && Date.now() < recentUntil;
       const cardClasses = ["vehicle-card"];
       if (vehicle.alerta) cardClasses.push("alert");
+      if (vehicle.esperando_viaje) cardClasses.push("waiting");
       if (recent) cardClasses.push("recent");
 
-      let statusClass = vehicle.alerta ? "alert" : moving ? "" : "stopped";
-      let statusLabel = vehicle.alerta ? "Alerta" : moving ? "En movimiento" : "Detenido";
-      if (recent) {
-        statusClass = "recent";
-        statusLabel = "Cambio por MCP";
-      }
+      const statusClass = vehicle.alerta ? "alert" : vehicle.esperando_viaje ? "waiting" : moving ? "" : "stopped";
+      const statusLabel = vehicle.alerta ? "Alerta" : vehicle.esperando_viaje ? "Esperando viaje" : moving ? "En movimiento" : "Detenido";
 
       return `
         <article class="${cardClasses.join(" ")}">
@@ -315,6 +321,7 @@
         document.querySelector("#total").textContent = data.resumen.total;
         document.querySelector("#moving").textContent = data.resumen.en_movimiento;
         document.querySelector("#stopped").textContent = data.resumen.detenidos;
+        document.querySelector("#waiting").textContent = data.resumen.esperando_viaje;
         document.querySelector("#alerts").textContent = data.resumen.alertas;
         document.querySelector("#updated").textContent = `Actualizado ${formatter.format(new Date(data.actualizado))}`;
         fleet.innerHTML = data.vehiculos.length ? data.vehiculos.map(renderVehicle).join("") : '<div class="message">No hay vehículos registrados.</div>';

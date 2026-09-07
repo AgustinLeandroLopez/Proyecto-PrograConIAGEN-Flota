@@ -14,11 +14,13 @@ El usuario principal es un operador o responsable de una flota pequeña que cons
 
 ## Reglas del producto
 
-- Un vehículo tiene identificador numérico, patente única, velocidad y minutos detenido.
+- Un vehículo tiene identificador numérico, patente única, velocidad, minutos detenido y la condición persistente `esperando_viaje`.
 - Si la velocidad es mayor que 0, el vehículo está en movimiento.
+- Si está detenido y `esperando_viaje` está activo, está disponible para recibir una asignación y no genera alerta, sin importar sus minutos detenido.
 - Si la velocidad es 0 y lleva hasta 30 minutos detenido, está detenido dentro del tiempo permitido.
 - Si la velocidad es 0 y lleva más de 30 minutos detenido, está en alerta.
 - La velocidad y los minutos detenido deben ser valores iguales o mayores que 0.
+- Un vehículo que pasa a tener velocidad mayor que 0 deja automáticamente de esperar viaje.
 
 ## Flujo principal
 
@@ -35,15 +37,15 @@ Codex decide qué herramienta utilizar según el pedido. Las herramientas contro
 
 ## Capacidades MCP
 
-- `consultar_vehiculos`: devuelve toda la flota con su estado calculado.
+- `consultar_vehiculos`: devuelve toda la flota con su estado calculado y la condición de espera de viaje.
 - `consultar_estado_vehiculo`: devuelve un vehículo por identificador.
 - `consultar_alertas`: devuelve los vehículos que superan el límite permitido.
-- `agregar_vehiculo`: registra un vehículo con una patente que no exista.
-- `actualizar_estado_vehiculo`: modifica velocidad y minutos detenido de un vehículo existente.
+- `agregar_vehiculo`: registra un vehículo con una patente que no exista e indica opcionalmente si espera viaje.
+- `actualizar_estado_vehiculo`: modifica velocidad, minutos detenido y la condición de espera de viaje de un vehículo existente.
 
 ## Dashboard
 
-El dashboard es una vista local de solo lectura. Presenta el resumen operativo, las alertas y el detalle de cada vehículo. Cuando detecta una incorporación o actualización mientras está abierto, identifica la herramienta MCP asociada y resalta temporalmente el vehículo afectado.
+El dashboard es una vista local de solo lectura. Presenta el resumen operativo, incluyendo una categoría separada para los vehículos esperando viaje, las alertas y el detalle de cada vehículo. Cuando detecta una incorporación o actualización mientras está abierto, identifica la herramienta MCP asociada y resalta temporalmente el vehículo afectado.
 
 ## Alcance actual
 
@@ -65,6 +67,7 @@ El dashboard es una vista local de solo lectura. Presenta el resumen operativo, 
 
 - Codex descubre y consume las herramientas del servidor MCP.
 - Las consultas devuelven datos consistentes con SQLite.
+- Un vehículo esperando viaje no aparece entre las alertas aunque supere los 30 minutos detenido.
 - Las escrituras se verifican mediante una consulta posterior.
 - El dashboard refleja las modificaciones sin recarga manual.
 - Las pruebas automatizadas finalizan correctamente.

@@ -5,7 +5,12 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from database import consultar_vehiculos, inicializar_base_de_datos
-from monitor import LIMITE_MINUTOS_DETENIDO, obtener_estado, esta_en_alerta
+from monitor import (
+    LIMITE_MINUTOS_DETENIDO,
+    esta_en_alerta,
+    esta_esperando_viaje,
+    obtener_estado,
+)
 
 
 HOST = "127.0.0.1"
@@ -17,11 +22,13 @@ def obtener_snapshot():
     vehiculos = []
     for vehiculo in consultar_vehiculos():
         alerta = esta_en_alerta(vehiculo)
+        esperando_viaje = esta_esperando_viaje(vehiculo)
         vehiculos.append(
             {
                 **vehiculo,
                 "estado": obtener_estado(vehiculo),
                 "alerta": alerta,
+                "esperando_viaje": esperando_viaje,
             }
         )
 
@@ -31,7 +38,13 @@ def obtener_snapshot():
         "resumen": {
             "total": len(vehiculos),
             "en_movimiento": sum(v["velocidad"] > 0 for v in vehiculos),
-            "detenidos": sum(v["velocidad"] == 0 for v in vehiculos),
+            "detenidos": sum(
+                v["velocidad"] == 0
+                and not v["esperando_viaje"]
+                and not v["alerta"]
+                for v in vehiculos
+            ),
+            "esperando_viaje": sum(v["esperando_viaje"] for v in vehiculos),
             "alertas": sum(v["alerta"] for v in vehiculos),
         },
         "vehiculos": vehiculos,
