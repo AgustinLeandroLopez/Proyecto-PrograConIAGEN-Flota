@@ -28,6 +28,10 @@ def conectar():
 
 def inicializar_base_de_datos():
     with conectar() as conexion:
+        conexion.execute("BEGIN IMMEDIATE")
+        es_nueva = conexion.execute(
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'vehiculos'"
+        ).fetchone() is None
         conexion.execute(
             """
             CREATE TABLE IF NOT EXISTS vehiculos (
@@ -52,14 +56,15 @@ def inicializar_base_de_datos():
                     CHECK (esperando_viaje IN (0, 1))
                 """
             )
-        conexion.executemany(
-            """
-            INSERT OR IGNORE INTO vehiculos
-                (id, patente, velocidad, minutos_detenido)
-            VALUES (?, ?, ?, ?)
-            """,
-            VEHICULOS_INICIALES,
-        )
+        if es_nueva:
+            conexion.executemany(
+                """
+                INSERT OR IGNORE INTO vehiculos
+                    (id, patente, velocidad, minutos_detenido)
+                VALUES (?, ?, ?, ?)
+                """,
+                VEHICULOS_INICIALES,
+            )
 
 
 def consultar_vehiculos():
@@ -131,3 +136,51 @@ def _convertir_vehiculo(fila):
     vehiculo = dict(fila)
     vehiculo["esperando_viaje"] = bool(vehiculo["esperando_viaje"])
     return vehiculo
+
+
+def eliminar_vehiculo(vehiculo_id):
+    with conectar() as conexion:
+        cursor = conexion.execute("DELETE FROM vehiculos WHERE id = ?", (vehiculo_id,))
+        return cursor.rowcount > 0
+
+
+def aplicar_cambio_confirmado(operacion, anterior, nuevo):
+    """Aplica una propuesta validada y comprueba el resultado en una transacción.
+
+    El bloqueo de escritura impide modificar una unidad que cambió desde que
+    el operador revisó la propuesta. El SQL y las columnas son siempre fijos.
+    """
+    with conectar() as conexion:
+        conexion.execute("BEGIN IMMEDIATE")
+        if operacion not in ("agregar", "actualizar", "eliminar"):
+            raise ValueError("Operación no permitida.")
+        if operacion != "agregar":
+            fila = conexion.execute("SELECT * FROM vehiculos WHERE id = ?", (anterior["id"],)).fetchone()
+            if fila is None or _convertir_vehiculo(fila) != anterior:
+                raise ValueError("El vehículo cambió o fue eliminado. Volvé a solicitar la operación.")
+        try:
+            if operacion == "agregar":
+                cursor = conexion.execute(
+                    "INSERT INTO vehiculos (patente, velocidad, minutos_detenido, esperando_viaje) VALUES (?, ?, ?, ?)",
+                    (nuevo["patente"], nuevo["velocidad"], nuevo["minutos_detenido"], int(nuevo["esperando_viaje"])),
+                )
+                identificador = cursor.lastrowid
+            elif operacion == "actualizar":
+                identificador = anterior["id"]
+                conexion.execute(
+                    "UPDATE vehiculos SET patente = ?, velocidad = ?, minutos_detenido = ?, esperando_viaje = ? WHERE id = ?",
+                    (nuevo["patente"], nuevo["velocidad"], nuevo["minutos_detenido"], int(nuevo["esperando_viaje"]), identificador),
+                )
+            else:
+                identificador = anterior["id"]
+                conexion.execute("DELETE FROM vehiculos WHERE id = ?", (identificador,))
+        except sqlite3.IntegrityError:
+            raise ValueError("La patente ya existe o los datos no son válidos. No se aplicó el cambio.") from None
+        fila = conexion.execute("SELECT * FROM vehiculos WHERE id = ?", (identificador,)).fetchone()
+        resultado = _convertir_vehiculo(fila) if fila else None
+        if operacion == "eliminar":
+            if resultado is not None:
+                raise ValueError("No se pudo verificar la eliminación.")
+        elif resultado is None or any(resultado[k] != v for k, v in nuevo.items()):
+            raise ValueError("No se pudo verificar el cambio.")
+        return resultado

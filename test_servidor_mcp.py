@@ -4,6 +4,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 import database
 from mcp import Client, StdioServerParameters
@@ -22,10 +23,22 @@ def obtener_resultado_estructurado(resultado):
 
 
 class ServidorMCPTest(unittest.IsolatedAsyncioTestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        cambio = patch.object(database, "RUTA_BASE_DATOS", Path(self.temp.name) / "test.db")
+        cambio.start()
+        self.addCleanup(cambio.stop)
+        database.inicializar_base_de_datos()
+
     async def test_transporte_stdio_publica_las_herramientas(self):
         servidor = StdioServerParameters(
             command=sys.executable,
-            args=[str(Path(__file__).with_name("servidor_mcp.py"))],
+            args=["-c", (
+                "import database, runpy; from pathlib import Path; "
+                f"database.RUTA_BASE_DATOS = Path({str(database.RUTA_BASE_DATOS)!r}); "
+                f"runpy.run_path({str(Path(__file__).with_name('servidor_mcp.py'))!r}, run_name='__main__')"
+            )],
         )
 
         async with Client(servidor) as cliente:
@@ -40,6 +53,7 @@ class ServidorMCPTest(unittest.IsolatedAsyncioTestCase):
                 "consultar_alertas",
                 "agregar_vehiculo",
                 "actualizar_estado_vehiculo",
+                "eliminar_vehiculo",
             },
         )
 
@@ -51,6 +65,18 @@ class ServidorMCPTest(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(resultado.is_error)
         ids = {vehiculo["id"] for vehiculo in vehiculos}
         self.assertTrue({1, 2, 3}.issubset(ids))
+
+    async def test_eliminar_y_verificar(self):
+        async with Client(mcp, raise_exceptions=True) as cliente:
+            resultado = await cliente.call_tool("eliminar_vehiculo", {"vehiculo_id": 1})
+            self.assertFalse(resultado.is_error)
+            self.assertTrue(obtener_resultado_estructurado(resultado)["eliminado"])
+            consulta = await cliente.call_tool("consultar_vehiculos", {})
+            self.assertNotIn(1, [v["id"] for v in obtener_resultado_estructurado(consulta)])
+            resultado = await cliente.call_tool("eliminar_vehiculo", {"vehiculo_id": 1})
+            self.assertTrue(resultado.is_error)
+        database.inicializar_base_de_datos()
+        self.assertIsNone(database.consultar_vehiculo(1))
 
     async def test_consultar_alertas(self):
         async with Client(mcp, raise_exceptions=True) as cliente:

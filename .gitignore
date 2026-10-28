@@ -2,3 +2,6 @@ __pycache__/
 *.pyc
 flota.db
 .doc_review/
+.env
+.env.*
+!.env.example

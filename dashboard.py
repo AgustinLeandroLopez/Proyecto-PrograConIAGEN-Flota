@@ -1,57 +1,72 @@
 import json
-from datetime import datetime
+import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
 
-from database import consultar_vehiculos, inicializar_base_de_datos
-from monitor import (
-    LIMITE_MINUTOS_DETENIDO,
-    esta_en_alerta,
-    esta_esperando_viaje,
-    obtener_estado,
-)
+from asistente import responder, validar_entrada
+from errores_asistente import ErrorAsistente
+from configuracion import cargar_configuracion
+
+from database import inicializar_base_de_datos
+from skills_flota.herramientas import obtener_snapshot
 
 
 HOST = "127.0.0.1"
 PORT = 8000
 RUTA_DASHBOARD = Path(__file__).with_name("dashboard") / "index.html"
-
-
-def obtener_snapshot():
-    vehiculos = []
-    for vehiculo in consultar_vehiculos():
-        alerta = esta_en_alerta(vehiculo)
-        esperando_viaje = esta_esperando_viaje(vehiculo)
-        vehiculos.append(
-            {
-                **vehiculo,
-                "estado": obtener_estado(vehiculo),
-                "alerta": alerta,
-                "esperando_viaje": esperando_viaje,
-            }
-        )
-
-    return {
-        "actualizado": datetime.now().astimezone().isoformat(timespec="seconds"),
-        "limite_minutos_detenido": LIMITE_MINUTOS_DETENIDO,
-        "resumen": {
-            "total": len(vehiculos),
-            "en_movimiento": sum(v["velocidad"] > 0 for v in vehiculos),
-            "detenidos": sum(
-                v["velocidad"] == 0
-                and not v["esperando_viaje"]
-                and not v["alerta"]
-                for v in vehiculos
-            ),
-            "esperando_viaje": sum(v["esperando_viaje"] for v in vehiculos),
-            "alertas": sum(v["alerta"] for v in vehiculos),
-        },
-        "vehiculos": vehiculos,
-    }
+CHAT_LOCK = threading.Lock()
+MAX_BODY = 24000
 
 
 class DashboardHandler(BaseHTTPRequestHandler):
+    def responder_json(self, status, datos):
+        contenido = json.dumps(datos, ensure_ascii=False).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Content-Length", str(len(contenido)))
+        self.end_headers()
+        self.wfile.write(contenido)
+
+    def do_POST(self):
+        if urlparse(self.path).path != "/api/asistente":
+            self.responder_json(404, {"error": "Recurso no encontrado"})
+            return
+        # Solo JSON del mismo origen local. No se habilita CORS.
+        origen = self.headers.get("Origin")
+        if (self.headers.get("Host") not in (f"127.0.0.1:{PORT}", f"localhost:{PORT}")
+                or (origen and origen not in (f"http://127.0.0.1:{PORT}", f"http://localhost:{PORT}"))):
+            self.responder_json(403, {"error": "Origen no permitido"})
+            return
+        if self.headers.get_content_type() != "application/json":
+            self.responder_json(415, {"error": "La consulta debe enviarse como JSON."})
+            return
+        try:
+            longitud = int(self.headers.get("Content-Length", "0"))
+            if not 1 <= longitud <= MAX_BODY or self.headers.get("Transfer-Encoding"):
+                raise ValueError("La consulta supera el tamaño admitido o está vacía.")
+            self.connection.settimeout(5)
+            body = json.loads(self.rfile.read(longitud))
+            validar_entrada(body)
+        except (ValueError, UnicodeError, OSError):
+            self.responder_json(400, {"error": "Consulta inválida. Usá hasta 1000 caracteres y cuatro mensajes de historial."})
+            return
+        if not CHAT_LOCK.acquire(blocking=False):
+            self.responder_json(429, {"error": "Ya hay una consulta en curso. Esperá a que termine."})
+            return
+        try:
+            respuesta = responder(body, obtener_snapshot)
+            self.responder_json(200, respuesta if isinstance(respuesta, dict) else {"respuesta": respuesta})
+        except ValueError as error:
+            self.responder_json(409, {"error": str(error)})
+        except ErrorAsistente as error:
+            self.responder_json(503, {"error": str(error)})
+        except Exception:
+            self.responder_json(500, {"error": "No se pudo completar la consulta del asistente."})
+        finally:
+            CHAT_LOCK.release()
+
     def do_GET(self):
         ruta = urlparse(self.path).path
 
@@ -90,6 +105,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
 
 
 def main():
+    cargar_configuracion()
     inicializar_base_de_datos()
     servidor = ThreadingHTTPServer((HOST, PORT), DashboardHandler)
     print(f"Dashboard disponible en http://{HOST}:{PORT}")

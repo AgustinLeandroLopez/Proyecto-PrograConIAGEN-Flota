@@ -1,340 +1,1423 @@
 <!doctype html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Estado en tiempo real de la flota local" />
-  <title>Monitor de flota</title>
-  <style>
-    :root {
-      color-scheme: dark;
-      --bg: #07111f;
-      --panel: #101f31;
-      --panel-strong: #0b1929;
-      --line: #263d56;
-      --text: #f2f7fb;
-      --muted: #8ea4bb;
-      --cyan: #20b8d8;
-      --green: #39e59a;
-      --amber: #ffc857;
-      --purple: #bb86fc;
-      --red: #ff5d79;
-    }
+<html lang="es"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#090D16"><meta name="description" content="Centro de operaciones y monitoreo local de flota"><title>Monitor de flota · Centro de operaciones</title>
+<style>
+/* Design tokens: no remote fonts or dependencies. */
+:root {
+  color-scheme:dark;
+  --bg:#090d16;
+  --panel:#111827;
+  --surface:#172033;
+  --line:#253044;
+  --text:#edf2fa;
+  --muted:#b0bdd0;
+  --cyan:#22d3ee;
+  --green:#4adea2;
+  --amber:#fbbf59;
+  --red:#fb8090;
+  --violet:#b9a0ff;
+}
+* {
+  box-sizing:border-box;
+}
+html {
+  scroll-behavior:smooth;
+  scroll-padding-top:24px;
+}
+body {
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font:14px/1.5 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+button,input,select {
+  font:inherit;
+}
+button,a {
+  touch-action:manipulation;
+}
+button {
+  cursor:pointer;
+}
+a {
+  color:inherit;
+  text-decoration:none;
+}
+button:disabled {
+  cursor:wait;
+  opacity:.65;
+}
+:focus-visible {
+  outline:2px solid var(--cyan);
+  outline-offset:4px;
+}
+h1,h2,p {
+  margin:0;
+}
+h1 {
+  font-size:30px;
+  letter-spacing:-1.2px;
+  line-height:1.25;
+}
+h2 {
+  font-size:16px;
+  letter-spacing:-.3px;
+}
+.icon {
+  width:19px;
+  height:19px;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:1.7;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+  flex-shrink:0;
+}
+.muted {
+  color:var(--muted);
+}
+.eyebrow {
+  font-size:10px;
+  letter-spacing:1.7px;
+  font-weight:700;
+  color:var(--muted);
+}
+.dot {
+  display:inline-block;
+  width:6px;
+  height:6px;
+  border-radius:50%;
+  background:currentColor;
+  flex-shrink:0;
+}
+.sr-only {
+  position:absolute;
+  width:1px;
+  height:1px;
+  overflow:hidden;
+  clip-path:inset(50%);
+}
+.skip {
+  position:fixed;
+  top:-80px;
+  left:20px;
+  z-index:10;
+  padding:12px;
+  background:var(--panel);
+}
+.skip:focus {
+  top:12px;
+}
+[hidden] {
+  display:none!important;
+}
+/* Application shell. */
+.sidebar {
+  position:fixed;
+  inset:0 auto 0 0;
+  width:202px;
+  padding:30px 12px 20px;
+  border-right:1px solid var(--line);
+  background:#0d1320;
+  display:flex;
+  flex-direction:column;
+  z-index:2;
+}
+.brand {
+  display:flex;
+  gap:9px;
+  align-items:center;
+  padding:0 6px;
+}
+.brand-mark {
+  flex-shrink:0;
+  display:grid;
+  place-items:center;
+  width:35px;
+  height:35px;
+  border-radius:10px;
+  background:var(--cyan);
+  color:#09202a;
+}
+.brand strong {
+  white-space:nowrap;
+  font-size:15px;
+  letter-spacing:-.4px;
+}
+.brand small {
+  display:block;
+  font-size:10px;
+  color:var(--muted);
+  letter-spacing:.7px;
+}
+.nav-label {
+  margin:42px 12px 14px;
+}
+.nav {
+  display:grid;
+  gap:7px;
+}
+.nav a {
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:11px 13px;
+  color:var(--muted);
+  border:1px solid transparent;
+  border-radius:8px;
+  font-size:13px;
+  font-weight:550;
+  transition:background .18s;
+}
+.nav a:hover {
+  background:var(--surface);
+  color:var(--text);
+}
+.nav a[aria-current] {
+  color:var(--cyan);
+  background:#12303c;
+  border-color:#1b4652;
+}
+.sidebar-bottom {
+  margin-top:auto;
+}
+.connection-box {
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:13px;
+  background:var(--panel);
+}
+.connection-heading {
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-size:12px;
+  font-weight:600;
+}
+.connection-heading svg {
+  color:var(--cyan);
+}
+.connection-box p {
+  font-size:12px;
+  color:var(--muted);
+  margin-top:7px;
+}
+.local-label {
+  padding:17px 5px 0;
+  font-size:11px;
+  color:var(--muted);
+  display:flex;
+  justify-content:space-between;
+}
+.workspace {
+  margin-left:202px;
+}
+.topbar {
+  height:66px;
+  border-bottom:1px solid var(--line);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 34px;
+  color:var(--muted);
+  font-size:12px;
+}
+.breadcrumb {
+  display:flex;
+  align-items:center;
+  gap:11px;
+}
+.breadcrumb strong {
+  font-weight:500;
+  color:var(--text);
+}
+.environment {
+  display:flex;
+  gap:8px;
+  align-items:center;
+}
+.environment .dot {
+  color:var(--cyan);
+}
+main {
+  max-width:1600px;
+  padding:32px 34px 24px;
+  margin:auto;
+}
+.page-head {
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:space-between;
+  align-items:center;
+  gap:20px;
+  margin-bottom:28px;
+}
+.page-head .eyebrow {
+  color:var(--cyan);
+  margin-bottom:8px;
+}
+.subtitle {
+  color:var(--muted);
+  margin-top:8px;
+  font-size:13px;
+}
+.header-actions {
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+  margin-left:auto;
+  max-width:100%;
+  align-items:center;
+  gap:12px;
+}
+.sync-info {
+  text-align:right;
+}
+.sync-state {
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:7px;
+  font-size:12px;
+  color:var(--green);
+}
+.sync-state[data-state="loading"] {
+  color:var(--cyan);
+}
+.sync-state[data-state="error"],.sync-state[data-state="offline"] {
+  color:var(--red);
+}
+#updated {
+  display:block;
+  font-size:12px;
+  margin-top:5px;
+  color:var(--muted);
+}
+.button {
+  display:inline-flex;
+  justify-content:center;
+  align-items:center;
+  gap:8px;
+  border:1px solid #35445b;
+  border-radius:8px;
+  background:var(--surface);
+  color:var(--text);
+  padding:9px 12px;
+  font-size:12px;
+  font-weight:550;
+}
+.button:hover {
+  background:#233047;
+}
+.button svg {
+  width:15px;
+  height:15px;
+}
+.button-assistant {
+  min-height:42px;
+  padding:10px 16px;
+  border-color:var(--cyan);
+  background:#12303c;
+  color:#baf5ff;
+  font-size:13px;
+  font-weight:650;
+  white-space:nowrap;
+  transition:background .15s,border-color .15s,box-shadow .15s;
+}
+.button-assistant svg {
+  width:18px;
+  height:18px;
+}
+.button-assistant:hover {
+  background:#194655;
+  border-color:#8beaff;
+  box-shadow:0 0 0 3px #22d3ee18;
+}
+.button-assistant:focus-visible {
+  outline:3px solid #baf5ff;
+  outline-offset:3px;
+}
+.button-assistant:active {
+  background:#205566;
+  border-color:#baf5ff;
+  box-shadow:inset 0 2px 4px #0005;
+}
+.refreshing svg {
+  animation:spin 1s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform:rotate(360deg);
+  }
+}
+/* Metrics and distribution. */
+.summary {
+  display:grid;
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  gap:14px;
+  margin-bottom:22px;
+}
+.metric {
+  border:1px solid var(--line);
+  border-radius:14px;
+  padding:17px 18px;
+  background:var(--panel);
+}
+.metric-top {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:6px;
+  color:var(--muted);
+  font-size:12px;
+}
+.metric-icon {
+  display:grid;
+  place-items:center;
+  width:30px;
+  height:30px;
+  border-radius:8px;
+  background:color-mix(in srgb,var(--accent) 10%,transparent);
+  color:var(--accent);
+  flex-shrink:0;
+}
+.metric-value {
+  font-size:32px;
+  font-weight:650;
+  letter-spacing:-1px;
+  line-height:1.2;
+  display:block;
+  margin:8px 0;
+  font-variant-numeric:tabular-nums;
+}
+.metric-foot {
+  font-size:12px;
+  color:var(--muted);
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+.metric-foot .dot {
+  color:var(--accent);
+}
+.metric.changed {
+  animation:metric-change .8s ease;
+}
+@keyframes metric-change {
+  50% {
+    border-color:var(--cyan);
+    background:#152b38;
+  }
+}
+.overview {
+  padding:16px 20px;
+  display:flex;
+  align-items:center;
+  gap:20px;
+  margin-bottom:26px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:#0e1623;
+}
+.overview-title {
+  font-size:12px;
+  font-weight:600;
+  white-space:nowrap;
+}
+.distribution {
+  display:flex;
+  gap:4px;
+  height:6px;
+  flex:1;
+  overflow:hidden;
+  border-radius:9px;
+  background:var(--surface);
+}
+.distribution span {
+  transition:width .3s;
+  min-width:0;
+  border-radius:3px;
+}
+.overview-caption {
+  color:var(--muted);
+  font-size:12px;
+}
+.error-banner {
+  border:1px solid #76384b;
+  background:#281924;
+  border-radius:9px;
+  padding:12px 16px;
+  color:#ffc1c9;
+  margin-bottom:20px;
+  font-size:12px;
+}
+/* Operations and session activity. */
+.content-grid {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 280px;
+  gap:22px;
+  align-items:start;
+}
+.panel {
+  border:1px solid var(--line);
+  background:var(--panel);
+  border-radius:14px;
+  overflow:hidden;
+  min-width:0;
+}
+.panel-header {
+  padding:20px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+}
+.panel-header p {
+  margin-top:4px;
+  color:var(--muted);
+  font-size:12px;
+}
+.count-label {
+  border:1px solid var(--line);
+  padding:3px 8px;
+  border-radius:6px;
+  font-size:12px;
+  color:var(--muted);
+  white-space:nowrap;
+}
+.filters {
+  padding:0 20px 18px;
+  display:flex;
+  gap:9px;
+  flex-wrap:wrap;
+}
+.search {
+  position:relative;
+  flex:1;
+  min-width:150px;
+}
+.search svg {
+  position:absolute;
+  left:10px;
+  top:11px;
+  width:15px;
+  height:15px;
+  color:var(--muted);
+}
+input,select {
+  border:1px solid var(--line);
+  background:#0c1320;
+  color:var(--text);
+  border-radius:7px;
+  padding:9px 10px;
+  font-size:12px;
+  min-height:37px;
+}
+input {
+  width:100%;
+  padding-left:33px;
+}
+input::placeholder {
+  color:var(--muted);
+}
+select {
+  max-width:100%;
+}
+.table-scroll {
+  overflow:auto;
+}
+table {
+  width:100%;
+  border-collapse:collapse;
+  text-align:left;
+  white-space:nowrap;
+}
+thead {
+  background:#141d2d;
+}
+th {
+  font-size:12px;
+  font-weight:500;
+  color:var(--muted);
+  padding:12px 16px;
+  border-block:1px solid var(--line);
+}
+td {
+  padding:18px 16px;
+  border-bottom:1px solid #202b3d;
+  font-size:13px;
+}
+tbody tr:last-child td {
+  border-bottom:0;
+}
+tbody tr:hover {
+  background:#172133;
+}
+tbody tr.recent {
+  background:#12313c;
+  box-shadow:inset 3px 0 var(--cyan);
+}
+.vehicle {
+  display:flex;
+  gap:11px;
+  align-items:center;
+}
+.vehicle-icon {
+  width:31px;
+  height:31px;
+  display:grid;
+  place-items:center;
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:8px;
+  color:var(--muted);
+  flex-shrink:0;
+}
+.vehicle strong {
+  display:block;
+  font-size:13px;
+  letter-spacing:.6px;
+}
+.vehicle small {
+  display:block;
+  color:var(--muted);
+  font-size:12px;
+  margin-top:2px;
+}
+.vehicle > div {
+  min-width:0;
+  overflow-wrap:anywhere;
+}
+.badge {
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  border:1px solid color-mix(in srgb,var(--badge) 20%,transparent);
+  background:color-mix(in srgb,var(--badge) 8%,transparent);
+  color:var(--badge);
+  padding:4px 7px;
+  border-radius:6px;
+  font-size:12px;
+  font-weight:500;
+}
+.speed-number {
+  font-variant-numeric:tabular-nums;
+}
+.speed-number small {
+  color:var(--muted);
+  font-size:12px;
+}
+.speed-track {
+  height:3px;
+  width:65px;
+  border-radius:4px;
+  background:#29344a;
+  margin-top:6px;
+  overflow:hidden;
+}
+.speed-track span {
+  display:block;
+  height:100%;
+  background:var(--cyan);
+  border-radius:4px;
+}
+.alert-cell {
+  color:var(--muted);
+  font-size:12px;
+}
+.alert-cell.critical {
+  color:var(--red);
+}
+.table-footer {
+  padding:12px 20px;
+  border-top:1px solid var(--line);
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  color:var(--muted);
+  font-size:12px;
+}
+.empty {
+  padding:36px 20px;
+  text-align:center;
+  white-space:normal;
+  color:var(--muted);
+}
+.empty-icon {
+  display:grid;
+  place-items:center;
+  margin:0 auto 13px;
+  width:42px;
+  height:42px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  color:var(--muted);
+}
+.empty strong {
+  display:block;
+  color:var(--text);
+  font-weight:550;
+  font-size:12px;
+}
+.empty p {
+  margin:7px auto 0;
+  font-size:12px;
+  max-width:235px;
+}
+.live-label {
+  display:flex;
+  align-items:center;
+  gap:5px;
+  font-size:11px;
+  color:var(--muted);
+  white-space:nowrap;
+}
+.activity-note {
+  font-size:12px;
+  color:var(--muted);
+  padding:0 20px 14px;
+  border-bottom:1px solid var(--line);
+}
+.event-list {
+  list-style:none;
+  margin:0;
+  padding:0;
+  max-height:400px;
+  overflow:auto;
+}
+.event {
+  display:flex;
+  gap:11px;
+  padding:16px 20px;
+  border-bottom:1px solid var(--line);
+}
+.event-icon {
+  flex-shrink:0;
+  width:27px;
+  height:27px;
+  display:grid;
+  place-items:center;
+  background:#18313b;
+  border-radius:8px;
+  color:var(--cyan);
+}
+.event-icon svg {
+  width:14px;
+  height:14px;
+}
+.event strong {
+  font-size:13px;
+  font-weight:550;
+  display:block;
+}
+.event p,.event time {
+  font-size:12px;
+  color:var(--muted);
+  display:block;
+  margin-top:4px;
+}
+.event code {
+  font-family:inherit;
+  color:var(--cyan);
+  overflow-wrap:anywhere;
+}
+.event > div {
+  min-width:0;
+  overflow-wrap:anywhere;
+}
+.activity-empty {
+  padding:32px 18px 38px;
+}
+.activity-footer {
+  padding:12px 20px;
+  border-top:1px solid var(--line);
+  font-size:12px;
+  color:var(--muted);
+}
+.rule-card {
+  margin-top:16px;
+  padding:17px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  display:flex;
+  gap:10px;
+  color:var(--muted);
+  font-size:12px;
+}
+.rule-card svg {
+  color:var(--amber);
+  width:17px;
+  height:17px;
+}
+.rule-card strong {
+  display:block;
+  color:var(--text);
+  font-size:13px;
+  margin-bottom:5px;
+}
+.page-footer {
+  display:flex;
+  justify-content:space-between;
+  gap:15px;
+  margin-top:25px;
+  font-size:10px;
+  color:var(--muted);
+}
+.skeleton {
+  height:44px;
+  margin:9px 0;
+  border-radius:4px;
+  background:var(--surface);
+  animation:skeleton 1.3s ease-in-out infinite alternate;
+}
+@keyframes skeleton {
+  to {
+    opacity:.35;
+  }
+}
+@media(min-width:1550px) {
+  td,th {
+    padding-left:23px;
+    padding-right:23px;
+  }
+  .content-grid {
+    grid-template-columns:minmax(0,1fr) 310px;
+  }
+}
+@media(max-width:1250px) {
+  .sidebar {
+    width:194px;
+    padding-inline:12px;
+  }
+  .workspace {
+    margin-left:194px;
+  }
+  main {
+    padding:28px 24px;
+  }
+  .topbar {
+    padding-inline:24px;
+  }
+  .content-grid {
+    grid-template-columns:minmax(0,1fr);
+  }
+  .activity-column {
+    display:grid;
+    grid-template-columns:1.5fr 1fr;
+    gap:18px;
+  }
+  .rule-card {
+    margin-top:0;
+    align-self:start;
+  }
+  .metric {
+    padding:14px;
+  }
+  .metric-top {
+    align-items:start;
+  }
+  .metric-icon {
+    width:24px;
+    height:24px;
+  }
+  .metric-top .icon {
+    width:15px;
+    height:15px;
+  }
+}
+@media(max-width:850px) {
+  .sidebar {
+    width:72px;
+    padding:24px 10px;
+  }
+  .brand {
+    padding:0;
+    justify-content:center;
+  }
+  .brand-copy,.nav-label,.nav-text,.sidebar-bottom {
+    display:none;
+  }
+  .nav {
+    margin-top:35px;
+  }
+  .nav a {
+    justify-content:center;
+    padding:12px;
+  }
+  .workspace {
+    margin-left:72px;
+  }
+  .summary {
+    gap:9px;
+  }
+  .metric-top {
+    flex-direction:column-reverse;
+    gap:9px;
+  }
+  .metric-value {
+    font-size:28px;
+  }
+  .metric-foot {
+    font-size:12px;
+  }
+  h1 {
+    font-size:26px;
+  }
+  .overview-caption {
+    max-width:180px;
+  }
+  .page-head {
+    flex-wrap:wrap;
+  }
+}
+@media(max-width:600px) {
+  html {
+    scroll-padding-top:80px;
+  }
+  .sidebar {
+    position:sticky;
+    top:0;
+    width:100%;
+    height:61px;
+    flex-direction:row;
+    align-items:center;
+    justify-content:space-between;
+    padding:9px 14px;
+    border-right:0;
+    border-bottom:1px solid var(--line);
+  }
+  .brand-mark {
+    width:31px;
+    height:31px;
+  }
+  .nav {
+    display:flex;
+    margin:0;
+    gap:5px;
+  }
+  .nav a {
+    padding:10px;
+  }
+  .workspace {
+    margin:0;
+  }
+  .topbar {
+    height:45px;
+    padding-inline:18px;
+    font-size:10px;
+  }
+  .environment {
+    font-size:9px;
+  }
+  main {
+    padding:24px 16px;
+  }
+  .page-head {
+    align-items:flex-start;
+    gap:16px;
+    margin-bottom:23px;
+  }
+  h1 {
+    font-size:25px;
+    letter-spacing:-.8px;
+  }
+  .subtitle {
+    font-size:12px;
+  }
+  .page-head .eyebrow {
+    font-size:9px;
+  }
+  .header-actions {
+    width:100%;
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:12px;
+  }
+  .sync-info {
+    grid-column:1/-1;
+    text-align:left;
+  }
+  .sync-state {
+    justify-content:flex-start;
+  }
+  .summary {
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:10px;
+  }
+  .metric {
+    padding:14px;
+  }
+  .metric-top {
+    flex-direction:row;
+    align-items:center;
+    font-size:12px;
+  }
+  .metric-value {
+    font-size:29px;
+  }
+  .metric:last-child {
+    grid-column:1/-1;
+    display:grid;
+    grid-template-columns:1fr auto;
+    column-gap:10px;
+  }
+  .metric:last-child .metric-top {
+    grid-column:1;
+  }
+  .metric:last-child .metric-value {
+    grid-column:2;
+    grid-row:1/3;
+    margin:0;
+    align-self:center;
+    color:var(--red);
+  }
+  .metric:last-child .metric-foot {
+    margin-top:6px;
+  }
+  .overview {
+    flex-wrap:wrap;
+    gap:11px;
+    padding:14px;
+  }
+  .overview-title {
+    font-size:11px;
+  }
+  .distribution {
+    min-width:90px;
+  }
+  .overview-caption {
+    width:100%;
+    max-width:none;
+    font-size:12px;
+  }
+  .panel-header {
+    padding:17px;
+  }
+  .filters {
+    padding:0 17px 16px;
+  }
+  .search {
+    flex-basis:100%;
+  }
+  .filters select {
+    flex:1;
+    min-width:0;
+  }
+  .table-scroll {
+    overflow:visible;
+  }
+  table,tbody {
+    display:block;
+    white-space:normal;
+  }
+  thead {
+    display:none;
+  }
+  tbody tr {
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    padding:16px;
+    gap:16px 12px;
+    border-top:1px solid var(--line);
+  }
+  td {
+    display:block;
+    padding:0;
+    border:0;
+  }
+  td:first-child {
+    grid-column:1;
+  }
+  td:nth-child(2) {
+    text-align:right;
+    align-self:center;
+  }
+  td:nth-child(n+3)::before {
+    content:attr(data-label);
+    display:block;
+    color:var(--muted);
+    font-size:12px;
+    margin-bottom:5px;
+  }
+  td:last-child {
+    grid-column:1/-1;
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  td:last-child::before {
+    margin:0;
+  }
+  .speed-track {
+    width:80px;
+  }
+  td.empty {
+    grid-column:1/-1;
+    padding:20px;
+    display:block;
+  }
+  .activity-column {
+    display:block;
+  }
+  .rule-card {
+    margin-top:14px;
+  }
+  .table-footer {
+    padding:12px 16px;
+    flex-wrap:wrap;
+  }
+  .page-footer {
+    flex-direction:column;
+    gap:6px;
+  }
+  .panel-header h2 {
+    font-size:14px;
+  }
+}
+@media(prefers-reduced-motion:reduce) {
+  html {
+    scroll-behavior:auto;
+  }
+  *,*::before {
+    animation:none!important;
+    transition:none!important;
+  }
+}
+/* Asistente: panel independiente que conserva visible el dashboard. */
+/* Fleet AI: SVG local compartido; el chat conserva su único estado y transporte. */
+.fleet-mascot {width:68px;height:76px;flex:none;overflow:visible;filter:drop-shadow(0 0 12px #22d3ee30);}
+.fleet-mascot .robot {animation:fleet-float 5s ease-in-out infinite;}
+.fleet-mascot .eyes {transform-box:fill-box;transform-origin:center;animation:fleet-blink 7s infinite;}
+@keyframes fleet-float {50% {transform:translateY(-3px);}}
+@keyframes fleet-blink {0%,43%,47%,100% {transform:scaleY(1);}45% {transform:scaleY(.12);}}
+@keyframes fleet-enter {from {opacity:0;transform:translateX(28px);}to {opacity:1;transform:translateX(0);}}
+@keyframes fleet-think {50% {opacity:.35;}}
+.fleet-launcher {position:fixed;right:24px;bottom:max(18px,env(safe-area-inset-bottom));z-index:15;display:flex;align-items:center;gap:10px;border:0;background:transparent;color:var(--text);padding:6px;border-radius:22px;}
+.fleet-launcher[hidden] {display:none;}
+.fleet-launcher .fleet-mascot {width:82px;height:94px;transition:transform .2s;}
+.fleet-launcher:hover .fleet-mascot {transform:translateY(-4px) rotate(4deg);}
+.fleet-launcher-label {padding:10px 15px;border:1px solid #22d3ee80;border-radius:18px 18px 4px 18px;background:linear-gradient(130deg,#123347,#101b2e);box-shadow:0 4px 24px #0006;font-size:12px;font-weight:650;}
+.chat-panel {position:fixed;inset:16px 16px 16px auto;width:min(392px,calc(100% - 32px));max-width:none;max-height:none;height:calc(100dvh - 32px);margin:0;padding:0;border:1px solid #34415a;border-radius:20px;background:linear-gradient(155deg,#151e32,var(--bg));color:var(--text);box-shadow:0 16px 70px #0009;z-index:20;overflow:hidden;}
+.chat-panel::backdrop {background:#03091445;}
+.chat-panel[open] {display:flex;flex-direction:column;animation:fleet-enter .22s ease-out;}
+.chat-panel.is-closing {opacity:0;transform:translateX(28px);transition:opacity .18s,transform .18s;}
+.chat-head {display:flex;align-items:center;padding:16px 14px 12px;gap:10px;border-bottom:1px solid var(--line);background:radial-gradient(ellipse at 15% 40%,#22d3ee12,transparent 65%);}
+.chat-head h2 {font-size:21px;letter-spacing:-.6px;}
+.chat-subtitle {font-size:12px;color:var(--muted);margin-top:2px;}
+.chat-service {font-size:10px;color:var(--muted);margin-top:7px;}
+.chat-close {align-self:flex-start;margin-left:auto;min-width:36px;min-height:36px;border:1px solid transparent;border-radius:10px;background:transparent;color:var(--muted);font-size:24px;line-height:1;}
+.chat-close:hover {background:var(--surface);color:var(--text);border-color:var(--line);}
+.chat-provider {display:grid;gap:5px;padding:12px 18px 0;font-size:11px;color:var(--muted);}
+.chat-provider select {width:100%;padding:9px;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--text);font:inherit;}
+.chat-note {padding:8px 18px 12px;color:var(--muted);font-size:11px;border-bottom:1px solid var(--line);}
+.chat-body {flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--line) transparent;}
+.chat-messages {padding:18px 14px 8px;display:flex;flex-direction:column;gap:18px;}
+.chat-messages[hidden] {display:none;}
+.chat-message {position:relative;margin:0 0 0 37px;padding:12px 14px;background:linear-gradient(135deg,#1b2941,#182035);border:1px solid var(--line);border-radius:4px 16px 16px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;line-height:1.75;}
+.chat-message>.fleet-mascot {position:absolute;left:-42px;top:0;width:34px;height:40px;}
+.chat-message .robot,.chat-message .eyes {animation:none;}
+.chat-message[data-role="usuario"] {align-self:flex-end;max-width:90%;margin-left:28px;border-color:#22d3ee45;background:#113041;border-radius:16px 4px 16px 16px;}
+.chat-message strong {display:block;color:var(--cyan);font-size:10px;letter-spacing:.3px;margin-bottom:4px;}
+.chat-message[data-role="usuario"] strong {color:var(--muted);}
+.chat-suggestions {display:grid;gap:7px;padding:14px 18px 20px;}
+.chat-suggestions h3 {font-size:12px;margin:0 0 3px;}
+.chat-suggestions button {display:flex;align-items:center;gap:10px;width:100%;background:linear-gradient(120deg,#172238,#131b2d);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:8px 10px;text-align:left;font:inherit;font-size:11px;transition:border-color .15s,background .15s;}
+.chat-suggestions button:hover {border-color:var(--cyan);background:#1b3044;}
+.quick-icon {display:grid;place-items:center;width:32px;height:32px;border-radius:9px;color:var(--accent,var(--cyan));background:color-mix(in srgb,var(--accent,var(--cyan)) 12%,transparent);flex:none;}
+.quick-icon svg {width:19px;height:19px;}
+.quick-chevron {margin-left:auto;font-size:20px;color:var(--muted);}
+.chat-status {padding:0 18px;color:var(--cyan);font-size:11px;max-height:76px;overflow:auto;}
+.chat-status:not(:empty) {padding-top:8px;padding-bottom:8px;}
+.chat-status[data-error="true"] {color:var(--red);background:#fb80900a;}
+.chat-panel[data-busy="true"] .chat-head .eyes {animation:fleet-think .8s infinite;}
+.chat-panel[data-busy="true"] .chat-status::before {content:'';display:inline-block;width:7px;height:7px;margin-right:7px;border-radius:50%;background:var(--cyan);animation:fleet-think .8s infinite;}
+.chat-form {display:flex;gap:8px;margin:12px 14px 8px;padding:5px;border:1px solid #22d3ee88;border-radius:13px;background:var(--bg);box-shadow:0 0 16px #22d3ee09;}
+.chat-form:focus-within {border-color:var(--cyan);}
+.chat-form textarea {min-width:0;flex:1;resize:none;border:0;background:transparent;padding:8px 6px;color:var(--text);font:inherit;font-size:12px;line-height:1.5;max-height:100px;}
+.chat-form textarea::placeholder {color:var(--muted);opacity:1;}
+.chat-form button {align-self:flex-end;display:grid;place-items:center;width:38px;height:38px;border:1px solid #71e9ff;border-radius:10px;background:linear-gradient(135deg,#30dbf2,#079fc3);color:#062335;}
+.chat-form button svg {width:20px;height:20px;}
+.chat-hint {padding:0 18px 14px;color:var(--muted);font-size:10px;}
+.chat-confirm {display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;white-space:normal;}
+.chat-message .button {min-height:40px;}
+@media(max-width:600px) {.chat-panel {inset:8px;width:calc(100% - 16px);height:calc(100dvh - 16px);border-radius:16px;}.header-actions {flex-wrap:wrap;}.fleet-launcher {right:12px;bottom:10px;}.fleet-launcher .fleet-mascot {width:64px;height:74px;}.fleet-launcher-label {font-size:11px;}.chat-hint {padding-bottom:max(12px,env(safe-area-inset-bottom));}}
+@media(max-height:650px) {.chat-head {padding:8px 12px;}.chat-head .fleet-mascot {width:44px;height:48px;}.chat-note {max-height:52px;overflow:auto;}.chat-service {margin-top:2px;}.chat-hint {display:none;}}
+@media(prefers-reduced-motion:reduce) {.fleet-mascot .robot,.fleet-mascot .eyes,.chat-panel[open],.chat-panel[data-busy="true"] .chat-head .eyes,.chat-panel[data-busy="true"] .chat-status::before {animation:none;}.fleet-launcher .fleet-mascot,.chat-panel.is-closing,.chat-suggestions button {transition:none;}}
+</style></head><body>
+<a class="skip" href="#dashboard">Saltar al contenido</a>
+<svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
+<defs>
+ <linearGradient id="fleet-shell" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#effdff"/><stop offset=".45" stop-color="#83dceb"/><stop offset="1" stop-color="#2386b3"/></linearGradient>
+ <linearGradient id="fleet-face" x2="0" y2="1"><stop stop-color="#142b43"/><stop offset="1" stop-color="#040c19"/></linearGradient>
+</defs>
+<symbol id="fleet-robot" viewBox="0 0 100 112">
+ <ellipse cx="50" cy="104" rx="26" ry="5" fill="#22d3ee" opacity=".16"/>
+ <g class="robot">
+  <path d="M50 19V9" stroke="#7cecff" stroke-width="3"/><circle cx="50" cy="7" r="4" fill="#22d3ee"/>
+  <ellipse cx="39" cy="96" rx="10" ry="5" fill="url(#fleet-shell)"/><ellipse cx="61" cy="96" rx="10" ry="5" fill="url(#fleet-shell)"/>
+  <rect x="32" y="65" width="36" height="29" rx="15" fill="url(#fleet-shell)"/>
+  <path d="M28 72q-10 5-8 15m52-15q10 5 8 15" fill="none" stroke="#8fdce9" stroke-width="9" stroke-linecap="round"/>
+  <path d="M42 78h16l-3 10H45z" fill="#092438"/><circle cx="50" cy="82" r="3" fill="#22d3ee"/>
+  <rect x="13" y="35" width="9" height="23" rx="4" fill="#17bcd7"/><rect x="78" y="35" width="9" height="23" rx="4" fill="#17bcd7"/>
+  <rect x="19" y="20" width="62" height="50" rx="23" fill="url(#fleet-shell)" stroke="#a8f4ff" stroke-width="1.5"/>
+  <rect x="26" y="28" width="48" height="34" rx="15" fill="url(#fleet-face)" stroke="#38cce9"/>
+  <g class="eyes" fill="#2ce7ff"><ellipse cx="39" cy="44" rx="4" ry="6"/><ellipse cx="61" cy="44" rx="4" ry="6"/></g>
+  <path d="M45 54q5 4 10 0" fill="none" stroke="#66eaff" stroke-width="2" stroke-linecap="round"/>
+  <path d="M31 25q14-6 28-2" fill="none" stroke="#fff" stroke-opacity=".65" stroke-width="2" stroke-linecap="round"/>
+ </g>
+</symbol>
+<symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></symbol>
+<symbol id="i-truck" viewBox="0 0 24 24"><path d="M3 6h11v11H3zM14 10h4l3 4v3h-7"/><circle cx="7" cy="18" r="2"/><circle cx="18" cy="18" r="2"/></symbol>
+<symbol id="i-alert" viewBox="0 0 24 24"><path d="m10.3 4-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.7-3l-8-14a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4m0 4h.01"/></symbol>
+<symbol id="i-activity" viewBox="0 0 24 24"><path d="M2 12h5l3-8 4 16 3-8h5"/></symbol>
+<symbol id="i-arrow" viewBox="0 0 24 24"><path d="m7 17 10-10M7 7h10v10"/></symbol>
+<symbol id="i-pause" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+<symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5M6.1 7a7 7 0 0 1 11.6-2L20 8M4 16l2.3 3A7 7 0 0 0 18 17"/></symbol>
+<symbol id="i-chat" viewBox="0 0 24 24"><path d="M20 11.5a8.5 8.5 0 0 1-8.5 8.5 9 9 0 0 1-4-.9L3 21l1.9-4.5a9 9 0 0 1-.9-4A8.5 8.5 0 0 1 12.5 4H16M18 2v6m-3-3h6M8 11h8m-8 4h5"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></symbol>
+<symbol id="i-link" viewBox="0 0 24 24"><path d="m9 15 6-6m-8 9-1 1a4 4 0 0 1-5-6l5-5a4 4 0 0 1 6 0m0 0 1-1a4 4 0 0 1 6 6l-5 5a4 4 0 0 1-6 0"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+</svg>
+<aside class="sidebar" aria-label="Navegación principal">
+<a class="brand" href="#dashboard" aria-label="Monitor de flota, inicio"><span class="brand-mark"><svg class="icon"><use href="#i-activity"/></svg></span><span class="brand-copy"><strong>Monitor de flota</strong><small>OPERATIONS PLATFORM</small></span></a>
+<div class="eyebrow nav-label">WORKSPACE</div><nav class="nav">
+<a href="#dashboard" aria-current="page" aria-label="Dashboard"><svg class="icon"><use href="#i-grid"/></svg><span class="nav-text">Dashboard</span></a>
 
-    * { box-sizing: border-box; }
 
-    body {
-      margin: 0;
-      min-height: 100vh;
-      background: radial-gradient(circle at 90% 0%, rgba(32, 184, 216, .15), transparent 34rem), var(--bg);
-      color: var(--text);
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    }
-
-    body::before {
-      content: "";
-      display: block;
-      height: 5px;
-      background: linear-gradient(90deg, var(--cyan), rgba(32, 184, 216, .15));
-    }
-
-    main { width: min(1120px, calc(100% - 32px)); margin: 0 auto; padding: 30px 0 48px; }
-    header, .section-head, .vehicle-top, .live, .activity-copy { display: flex; align-items: center; }
-    header { justify-content: space-between; gap: 20px; margin-bottom: 22px; }
-    h1, h2, p { margin: 0; }
-
-    .kicker {
-      display: block;
-      margin-bottom: 4px;
-      color: var(--cyan);
-      font-size: .74rem;
-      font-weight: 700;
-      letter-spacing: .12em;
-      text-transform: uppercase;
-    }
-
-    h1 { font-size: clamp(1.75rem, 4vw, 2.5rem); letter-spacing: -.04em; }
-    h2 { font-size: 1.05rem; }
-    .subtitle, .timestamp { color: var(--muted); }
-    .subtitle { margin-top: 4px; }
-
-    .live {
-      gap: 9px;
-      padding: 9px 12px;
-      border: 1px solid rgba(57, 229, 154, .34);
-      border-radius: 999px;
-      color: var(--green);
-      background: rgba(57, 229, 154, .08);
-      font-size: .78rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      white-space: nowrap;
-    }
-
-    .live::before {
-      content: "";
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: currentColor;
-      box-shadow: 0 0 0 5px rgba(57, 229, 154, .11);
-      animation: pulse 1.8s infinite;
-    }
-
-    .live.offline { color: var(--red); border-color: rgba(255, 93, 121, .34); background: rgba(255, 93, 121, .08); }
-    @keyframes pulse { 50% { box-shadow: 0 0 0 9px rgba(57, 229, 154, 0); } }
-
-    .activity {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      align-items: center;
-      gap: 16px;
-      margin-bottom: 18px;
-      padding: 15px 17px;
-      border: 1px solid rgba(32, 184, 216, .36);
-      border-radius: 14px;
-      background: linear-gradient(90deg, rgba(32, 184, 216, .13), var(--panel));
-      transition: border-color 180ms ease, transform 180ms ease;
-    }
-
-    .activity.changed { border-color: var(--cyan); transform: translateY(-2px); }
-    .activity-copy { gap: 12px; }
-
-    .activity-icon {
-      display: grid;
-      place-items: center;
-      width: 38px;
-      height: 38px;
-      flex: 0 0 auto;
-      border-radius: 10px;
-      color: var(--cyan);
-      background: rgba(32, 184, 216, .13);
-      font-size: .72rem;
-      font-weight: 800;
-      letter-spacing: .05em;
-    }
-
-    .activity strong { display: block; font-size: .94rem; }
-    .activity-detail, .activity-time { color: var(--muted); font-size: .78rem; }
-    .tool-name { color: var(--cyan); font-weight: 700; }
-
-    .summary { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 26px; }
-    .metric { padding: 16px 18px; border: 1px solid var(--line); border-radius: 14px; background: rgba(16, 31, 49, .94); }
-    .metric-label { color: var(--muted); font-size: .82rem; }
-    .metric-value { display: block; margin-top: 4px; font-size: 1.65rem; font-weight: 760; font-variant-numeric: tabular-nums; }
-    .metric.alert .metric-value { color: var(--red); }
-    .metric.waiting .metric-value { color: var(--purple); }
-
-    .section-head { justify-content: space-between; gap: 18px; margin-bottom: 13px; }
-    .timestamp { font-size: .8rem; }
-    .fleet-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
-
-    .vehicle-card {
-      position: relative;
-      overflow: hidden;
-      padding: 18px;
-      border: 1px solid var(--line);
-      border-radius: 15px;
-      background: var(--panel);
-      transition: transform 180ms ease, border-color 180ms ease;
-    }
-
-    .vehicle-card:hover { transform: translateY(-2px); }
-    .vehicle-card.alert { border-color: rgba(255, 93, 121, .67); }
-    .vehicle-card.waiting { border-color: rgba(187, 134, 252, .62); }
-    .vehicle-card.alert::before, .vehicle-card.recent::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 4px; background: var(--red); }
-    .vehicle-card.waiting::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 4px; background: var(--purple); }
-    .vehicle-card.waiting.recent::before { background: var(--cyan); }
-    .vehicle-card.recent { border-color: rgba(32, 184, 216, .75); background: linear-gradient(110deg, rgba(32, 184, 216, .09), var(--panel)); }
-    .vehicle-card.recent::before { background: var(--cyan); }
-    .vehicle-top { justify-content: space-between; gap: 12px; }
-    .plate { font-size: 1.12rem; font-weight: 800; letter-spacing: .06em; }
-    .vehicle-meta { margin-top: 2px; color: var(--muted); font-size: .78rem; }
-
-    .status-pill {
-      padding: 6px 9px;
-      border-radius: 999px;
-      color: var(--green);
-      background: rgba(57, 229, 154, .1);
-      font-size: .74rem;
-      font-weight: 700;
-      white-space: nowrap;
-    }
-
-    .status-pill.stopped { color: var(--amber); background: rgba(255, 200, 87, .11); }
-    .status-pill.waiting { color: var(--purple); background: rgba(187, 134, 252, .13); }
-    .status-pill.alert { color: var(--red); background: rgba(255, 93, 121, .11); }
-    .status-pill.recent { color: var(--cyan); background: rgba(32, 184, 216, .11); }
-    .vehicle-data { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-top: 14px; }
-    .datum { padding: 11px 12px; border-radius: 10px; background: var(--panel-strong); }
-    .datum span { display: block; color: var(--muted); font-size: .76rem; }
-    .datum strong { display: block; margin-top: 2px; font-size: 1rem; }
-    .vehicle-card.alert .datum:last-child strong { color: var(--red); }
-
-    .message { grid-column: 1 / -1; padding: 20px; border: 1px solid var(--line); border-radius: 14px; color: var(--muted); background: var(--panel); text-align: center; }
-    .message.error { color: #ffb0bd; border-color: rgba(255, 93, 121, .55); }
-
-    @media (max-width: 760px) {
-      .summary { grid-template-columns: repeat(2, 1fr); }
-      .fleet-grid { grid-template-columns: 1fr; }
-      .activity { grid-template-columns: 1fr; }
-    }
-
-    @media (max-width: 520px) {
-      main { width: min(100% - 22px, 1120px); padding-top: 22px; }
-      header { align-items: flex-start; flex-direction: column; }
-      .metric { padding: 14px; }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      *, *::before { animation: none !important; transition: none !important; }
-    }
-  </style>
-</head>
-<body>
-  <main>
-    <header>
-      <div>
-        <span class="kicker">Centro de control</span>
-        <h1>Monitor de flota</h1>
-        <p class="subtitle">Estado operativo en tiempo real</p>
-      </div>
-      <div class="live" id="connection">Sincronización automática</div>
-    </header>
-
-    <section class="activity" id="activity" aria-live="polite">
-      <div class="activity-copy">
-        <span class="activity-icon" aria-hidden="true">MCP</span>
-        <div>
-          <strong id="activity-title">Monitor Fijo - Cambios desde el MCP </strong>
-          <span class="activity-detail" id="activity-detail">Esperando cambios en la flota</span>
-        </div>
-      </div>
-      <span class="activity-time" id="activity-time">ahora</span>
-    </section>
-
-    <section class="summary" aria-label="Resumen de la flota">
-      <article class="metric"><span class="metric-label">Vehículos</span><strong class="metric-value" id="total">—</strong></article>
-      <article class="metric"><span class="metric-label">En movimiento</span><strong class="metric-value" id="moving">—</strong></article>
-      <article class="metric"><span class="metric-label">Detenidos</span><strong class="metric-value" id="stopped">—</strong></article>
-      <article class="metric waiting"><span class="metric-label">Esperando viaje</span><strong class="metric-value" id="waiting">—</strong></article>
-      <article class="metric alert"><span class="metric-label">Alertas activas</span><strong class="metric-value" id="alerts">—</strong></article>
-    </section>
-
-    <div class="section-head">
-      <h2>Estado de los vehículos</h2>
-      <span class="timestamp" id="updated">Conectando…</span>
-    </div>
-
-    <section class="fleet-grid" id="fleet" aria-live="polite">
-      <div class="message">Cargando estado de la flota…</div>
-    </section>
-  </main>
-
-  <script>
-    const fleet = document.querySelector("#fleet");
-    const activity = document.querySelector("#activity");
-    const connection = document.querySelector("#connection");
-    const formatter = new Intl.DateTimeFormat("es-AR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-    let previousVehicles = null;
-    let recentVehicleId = null;
-    let recentUntil = 0;
-
-    function escapeHtml(value) {
-      const element = document.createElement("span");
-      element.textContent = String(value);
-      return element.innerHTML;
-    }
-
-    function showActivity(title, toolName) {
-      document.querySelector("#activity-title").textContent = title;
-      document.querySelector("#activity-detail").innerHTML = `Cambio detectado mediante <span class="tool-name">${escapeHtml(toolName)}</span>`;
-      document.querySelector("#activity-time").textContent = "ahora";
-      activity.classList.add("changed");
-      window.setTimeout(() => activity.classList.remove("changed"), 1800);
-    }
-
-    function detectChanges(vehicles) {
-      if (previousVehicles === null) {
-        previousVehicles = new Map(vehicles.map((vehicle) => [vehicle.id, vehicle]));
-        return;
-      }
-
-      const current = new Map(vehicles.map((vehicle) => [vehicle.id, vehicle]));
-      const added = vehicles.find((vehicle) => !previousVehicles.has(vehicle.id));
-
-      if (added) {
-        recentVehicleId = added.id;
-        recentUntil = Date.now() + 10000;
-        showActivity(`${added.patente} fue agregado a la flota`, "agregar_vehiculo");
-      } else {
-        const changed = vehicles.find((vehicle) => {
-          const previous = previousVehicles.get(vehicle.id);
-          return previous && (previous.velocidad !== vehicle.velocidad || previous.minutos_detenido !== vehicle.minutos_detenido || previous.esperando_viaje !== vehicle.esperando_viaje || previous.patente !== vehicle.patente);
-        });
-
-        if (changed) {
-          recentVehicleId = changed.id;
-          recentUntil = Date.now() + 10000;
-          showActivity(`${changed.patente} actualizó su estado`, "actualizar_estado_vehiculo");
-        }
-      }
-
-      previousVehicles = current;
-    }
-
-    function renderVehicle(vehicle) {
-      const moving = Number(vehicle.velocidad) > 0;
-      const recent = vehicle.id === recentVehicleId && Date.now() < recentUntil;
-      const cardClasses = ["vehicle-card"];
-      if (vehicle.alerta) cardClasses.push("alert");
-      if (vehicle.esperando_viaje) cardClasses.push("waiting");
-      if (recent) cardClasses.push("recent");
-
-      const statusClass = vehicle.alerta ? "alert" : vehicle.esperando_viaje ? "waiting" : moving ? "" : "stopped";
-      const statusLabel = vehicle.alerta ? "Alerta" : vehicle.esperando_viaje ? "Esperando viaje" : moving ? "En movimiento" : "Detenido";
-
-      return `
-        <article class="${cardClasses.join(" ")}">
-          <div class="vehicle-top">
-            <div>
-              <div class="plate">${escapeHtml(vehicle.patente)}</div>
-              <div class="vehicle-meta">Vehículo ${escapeHtml(vehicle.id)}</div>
-            </div>
-            <span class="status-pill ${statusClass}">${statusLabel}</span>
-          </div>
-          <div class="vehicle-data">
-            <div class="datum"><span>Velocidad</span><strong>${escapeHtml(vehicle.velocidad)} km/h</strong></div>
-            <div class="datum"><span>Tiempo detenido</span><strong>${escapeHtml(vehicle.minutos_detenido)} min</strong></div>
-          </div>
-        </article>`;
-    }
-
-    async function refresh() {
-      try {
-        const response = await fetch("/api/vehiculos", { cache: "no-store" });
-        if (!response.ok) throw new Error("No se pudo consultar el estado");
-        const data = await response.json();
-        connection.textContent = "Sincronización automática";
-        connection.classList.remove("offline");
-        detectChanges(data.vehiculos);
-        document.querySelector("#total").textContent = data.resumen.total;
-        document.querySelector("#moving").textContent = data.resumen.en_movimiento;
-        document.querySelector("#stopped").textContent = data.resumen.detenidos;
-        document.querySelector("#waiting").textContent = data.resumen.esperando_viaje;
-        document.querySelector("#alerts").textContent = data.resumen.alertas;
-        document.querySelector("#updated").textContent = `Actualizado ${formatter.format(new Date(data.actualizado))}`;
-        fleet.innerHTML = data.vehiculos.length ? data.vehiculos.map(renderVehicle).join("") : '<div class="message">No hay vehículos registrados.</div>';
-      } catch (error) {
-        connection.textContent = "Sin conexión";
-        connection.classList.add("offline");
-        document.querySelector("#updated").textContent = "Sin conexión";
-        fleet.innerHTML = `<div class="message error">${escapeHtml(error.message)}. Reintentando…</div>`;
-      }
-    }
-
-    refresh();
-    window.setInterval(refresh, 2000);
-  </script>
-</body>
-</html>
+</nav>
+<div class="sidebar-bottom"><div class="local-label"><span>Entorno local</span></div></div></aside>
+<div class="workspace"><div class="topbar"><div class="breadcrumb"><svg class="icon"><use href="#i-grid"/></svg><span>Workspace</span><span>/</span><strong id="breadcrumb">Dashboard</strong></div></div>
+<main id="dashboard" tabindex="-1">
+<header class="page-head"><div><p class="eyebrow">VISIBILIDAD EN TIEMPO REAL</p><h1>Centro de operaciones</h1><p class="subtitle">Monitoreo inteligente de flota</p></div><div class="header-actions"><div class="sync-info"><div class="sync-state" id="connection" data-state="loading" role="status"><span class="dot"></span><span id="connection-label">Conectando…</span></div><time id="updated">Sin actualizaciones todavía</time></div><button class="button" id="refresh" aria-label="Actualizar flota"><svg class="icon"><use href="#i-refresh"/></svg><span>Actualizar</span></button></div></header>
+<div class="error-banner" id="error" role="alert" hidden></div>
+<section class="summary" aria-label="Resumen de la flota">
+<article class="metric" style="--accent:var(--cyan)"><div class="metric-top"><span>Total de vehículos</span><span class="metric-icon"><svg class="icon"><use href="#i-truck"/></svg></span></div><strong class="metric-value" id="total">—</strong><p class="metric-foot"><span class="dot"></span>Flota registrada</p></article>
+<article class="metric" style="--accent:var(--green)"><div class="metric-top"><span>En movimiento</span><span class="metric-icon"><svg class="icon"><use href="#i-arrow"/></svg></span></div><strong class="metric-value" id="moving">—</strong><p class="metric-foot"><span class="dot"></span>Operación en marcha</p></article>
+<article class="metric" style="--accent:var(--amber)"><div class="metric-top"><span>Detenidos</span><span class="metric-icon"><svg class="icon"><use href="#i-pause"/></svg></span></div><strong class="metric-value" id="stopped">—</strong><p class="metric-foot"><span class="dot"></span>Dentro del tiempo permitido</p></article>
+<article class="metric" style="--accent:var(--violet)"><div class="metric-top"><span>Esperando viaje</span><span class="metric-icon"><svg class="icon"><use href="#i-clock"/></svg></span></div><strong class="metric-value" id="waiting">—</strong><p class="metric-foot"><span class="dot"></span>Disponibles para asignación</p></article>
+<article class="metric" style="--accent:var(--red)"><div class="metric-top"><span>Alertas activas</span><span class="metric-icon"><svg class="icon"><use href="#i-alert"/></svg></span></div><strong class="metric-value" id="alerts">—</strong><p class="metric-foot"><span class="dot"></span>Requieren atención</p></article></section>
+<section class="overview" aria-label="Distribución de estados"><span class="overview-title">Pulso de la flota</span><div class="distribution" id="distribution" aria-hidden="true"></div><span class="overview-caption" id="overview-caption">Esperando primera sincronización</span></section>
+<div class="content-grid"><section class="panel" id="vehiculos" aria-labelledby="fleet-title"><div class="panel-header"><div><h2 id="fleet-title">Vehículos de la flota</h2><p id="fleet-subtitle">Estado y disponibilidad de cada unidad</p></div><span class="count-label" id="fleet-count">Cargando…</span></div>
+<form class="filters" role="search"><div class="search"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg><label class="sr-only" for="search">Buscar por patente</label><input id="search" type="search" placeholder="Buscar patente…" autocomplete="off"></div><label class="sr-only" for="status">Filtrar por estado</label><select id="status"><option value="all">Todos los estados</option><option value="moving">En movimiento</option><option value="stopped">Detenidos</option><option value="waiting">Esperando viaje</option><option value="alert">En alerta</option></select><label class="sr-only" for="sort">Ordenar vehículos</label><select id="sort"><option value="plate">Patente: A–Z</option><option value="speed-desc">Velocidad: mayor primero</option><option value="speed-asc">Velocidad: menor primero</option><option value="state">Estado: prioridad</option></select></form>
+<div class="table-scroll"><table aria-label="Estado operativo de vehículos"><thead><tr><th scope="col">Vehículo / patente</th><th scope="col">Estado operativo</th><th scope="col">Velocidad</th><th scope="col">Detenido</th><th scope="col">Alerta</th></tr></thead><tbody id="fleet" aria-busy="true"><tr><td colspan="5" class="empty"><span class="sr-only">Cargando flota</span><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></td></tr></tbody></table></div><div class="table-footer"><span id="result-count" role="status">Consultando vehículos…</span><span>Actualización automática cada 2 s</span></div></section>
+<div class="activity-column"><section class="panel activity-panel" id="actividad" aria-labelledby="activity-title"><div class="panel-header"><h2 id="activity-title">Actividad reciente</h2><span class="live-label"><span class="dot"></span>SESIÓN</span></div><p class="activity-note">Cambios observados mientras esta página está abierta.</p><ol class="event-list" id="events"></ol><div id="activity-empty" class="empty activity-empty"><span class="empty-icon"><svg class="icon"><use href="#i-activity"/></svg></span><strong>Todo listo para monitorear</strong><p>Las incorporaciones y cambios de estado aparecerán aquí al detectarse.</p></div><div class="activity-footer" id="activity-status" role="status">Esperando la primera consulta</div></section></div></div>
+<footer class="page-footer"><span>Monitor de flota / Datos locales · Asistente en nube o local</span><span id="footer-sync">La conexión se verifica en cada consulta</span></footer></main></div>
+<button class="fleet-launcher" id="fleet-launcher" type="button" aria-label="Abrir Fleet AI, tu asistente de operaciones" aria-controls="chat-panel" aria-expanded="false"><span class="fleet-launcher-label">¿Necesitás ayuda?</span><svg class="fleet-mascot" aria-hidden="true"><use href="#fleet-robot"/></svg></button>
+<dialog class="chat-panel" id="chat-panel" aria-labelledby="chat-title" aria-describedby="chat-subtitle">
+ <div class="chat-head"><svg class="fleet-mascot" aria-hidden="true"><use href="#fleet-robot"/></svg><div><h2 id="chat-title">Fleet AI</h2><p class="chat-subtitle" id="chat-subtitle">Tu asistente de operaciones</p><p class="chat-service">Disponibilidad del modelo sin comprobar</p></div><button class="chat-close" id="chat-close" type="button" aria-label="Cerrar asistente">&times;</button></div>
+ <label class="chat-provider" for="chat-provider"><span id="chat-mode">GEMINI · NUBE</span><select id="chat-provider"><option value="nube">Asistente IA en la nube · Gemini</option><option value="local">Asistente IA local · Gemma 3 4B</option></select></label>
+ <p class="chat-note" id="chat-note">Las consultas y los datos actuales de la flota se envían a Gemini. No incluyas secretos. Cada cambio requiere tu confirmación.</p>
+ <div class="chat-body">
+  <div class="chat-messages" id="chat-messages-nube" role="log" aria-label="Conversación con Gemini" aria-live="polite"></div>
+  <div class="chat-messages" id="chat-messages-local" role="log" aria-label="Conversación con Ollama" aria-live="polite" hidden></div>
+  <div class="chat-suggestions" id="chat-suggestions"><h3>Sugerencias rápidas</h3></div>
+ </div>
+ <p class="chat-status" id="chat-status" role="status"></p>
+ <form class="chat-form" id="chat-form"><label class="sr-only" for="chat-input">Consulta o pedido sobre la flota</label><textarea id="chat-input" name="mensaje" rows="2" maxlength="1000" required placeholder="Preguntame algo sobre tu flota..."></textarea><button id="chat-send" type="submit" aria-label="Enviar mensaje"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m4 12 16-8-6 16-3-7-7-1Zm7 1 9-9"/></svg></button></form>
+ <p class="chat-hint">Enter para enviar · Shift+Enter para una nueva línea</p>
+</dialog>
+<script>
+// HTTP and MCP share SQLite. The connection indicator checks HTTP health.
+const $ = selector => document.querySelector(selector);
+const state = {vehicles:null,previous:null,events:[],recent:new Map(),busy:false,timer:null,lastSuccess:null,failures:0};
+const timeFormat = new Intl.DateTimeFormat('es-AR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+const dateFormat = new Intl.DateTimeFormat('es-AR',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+const statuses = {moving:{label:'En movimiento',color:'var(--green)',priority:3},stopped:{label:'Detenido',color:'var(--amber)',priority:1},waiting:{label:'Esperando viaje',color:'var(--violet)',priority:2},alert:{label:'En alerta',color:'var(--red)',priority:0}};
+function escapeHtml(value){const el=document.createElement('span');el.textContent=String(value);return el.innerHTML;}
+function icon(name){return `<svg class="icon" aria-hidden="true"><use href="#i-${name}"/></svg>`;}
+function statusOf(v){return v.alerta?'alert':v.esperando_viaje?'waiting':Number(v.velocidad)>0?'moving':'stopped';}
+function setConnection(mode,label){$('#connection').dataset.state=mode;$('#connection-label').textContent=label;$('#footer-sync').textContent=['error','offline'].includes(mode)?'Datos sin actualizar · Reintento automático cada 2 s':'Sincronización local · Consulta cada 2 s';}
+// Session observations, not a backend audit trail. Tool attribution is inferred.
+function observeChanges(vehicles){
+ const now=Date.now();
+ if(state.previous!==null){
+  for(const v of vehicles){
+   const before=state.previous.get(v.id);
+   if(before&&['patente','velocidad','minutos_detenido','esperando_viaje','alerta'].every(key=>before[key]===v[key]))continue;
+   let title='Estado actualizado';
+   if(!before)title='Vehículo incorporado';
+   else if(v.alerta&&!before.alerta)title='Alerta detectada';
+   else if(v.velocidad>0&&before.velocidad===0)title='Reanudó su marcha';
+   else if(v.esperando_viaje&&!before.esperando_viaje)title='Esperando viaje';
+   else if(v.velocidad===0&&before.velocidad>0)title='Vehículo detenido';
+   else if(!v.alerta&&before.alerta)title='Alerta resuelta';
+   state.events.unshift({title,plate:v.patente,time:now,tool:before?'actualizar_estado_vehiculo':'agregar_vehiculo',kind:v.alerta?'alert':'activity'});
+   state.recent.set(v.id,now+10000);
+  }
+  for(const [id,v] of state.previous)if(!vehicles.some(current=>current.id===id))state.events.unshift({title:'Vehículo ya no presente',plate:v.patente,time:now,kind:'truck'});
+  state.events=state.events.slice(0,50);
+ }
+ state.previous=new Map(vehicles.map(v=>[v.id,v]));
+ for(const [id,until] of state.recent)if(until<=now)state.recent.delete(id);
+ renderActivity();
+}
+let lastActivityHtml='';
+function renderActivity(){
+ $('#activity-empty').hidden=state.events.length>0;
+ const html=state.events.map(e=>`<li class="event"><span class="event-icon">${icon(e.kind)}</span><div><strong>${escapeHtml(e.plate)} · ${escapeHtml(e.title)}</strong>${e.tool?`<p>Herramienta asociada: <code>${e.tool}</code><br>Origen inferido; sin confirmación MCP.</p>`:''}<time datetime="${new Date(e.time).toISOString()}">Observado ${timeFormat.format(e.time)}</time></div></li>`).join('');
+ if(lastActivityHtml!==html){$('#events').innerHTML=html;lastActivityHtml=html;}
+ $('#activity-status').textContent=state.events.length?`${state.events.length} eventos observados · Hasta 50 por sesión`:'Esperando cambios en la flota';
+}
+function renderVehicle(v,maxSpeed){
+ const status=statuses[statusOf(v)],recent=(state.recent.get(v.id)||0)>Date.now();
+ return `<tr class="${recent?'recent':''}"><td><div class="vehicle"><span class="vehicle-icon">${icon('truck')}</span><div><strong>${escapeHtml(v.patente)}</strong><small>Unidad ${escapeHtml(v.id)}${recent?' · Actualizada':''}</small></div></div></td><td><span class="badge" style="--badge:${status.color}"><span class="dot"></span>${status.label}</span></td><td data-label="Velocidad"><span class="speed-number">${escapeHtml(v.velocidad)} <small>km/h</small></span><div class="speed-track" title="Velocidad relativa a la mayor velocidad actual de la flota"><span style="width:${Math.max(0,Math.min(100,Number(v.velocidad)/maxSpeed*100))}%"></span></div></td><td data-label="Tiempo detenido"><span class="speed-number">${escapeHtml(v.minutos_detenido)} <span class="muted">min</span></span></td><td data-label="Alerta" class="alert-cell ${v.alerta?'critical':''}">${v.alerta?'Requiere atención':'Sin alerta'}</td></tr>`;
+}
+let lastFleetHtml='';
+function renderFleet(){
+ if(state.vehicles===null)return;
+ const query=$('#search').value.trim().toLocaleLowerCase('es-AR'),filter=$('#status').value;
+ const filtered=state.vehicles.filter(v=>(!query||v.patente.toLocaleLowerCase('es-AR').includes(query))&&(filter==='all'||filter===statusOf(v)));
+ const sort=$('#sort').value;
+ filtered.sort((a,b)=>(sort==='speed-desc'?b.velocidad-a.velocidad:sort==='speed-asc'?a.velocidad-b.velocidad:sort==='state'?statuses[statusOf(a)].priority-statuses[statusOf(b)].priority:0)||a.patente.localeCompare(b.patente,'es-AR',{numeric:true}));
+ const maxSpeed=Math.max(1,...state.vehicles.map(v=>Number(v.velocidad)));
+ let title='No hay coincidencias',text='Probá otra patente o cambiá el filtro de estado.';
+ if(!state.vehicles.length){title='Tu flota empieza acá';text='Todavía no hay vehículos registrados. Las incorporaciones aparecerán automáticamente.';}
+ const html=filtered.length?filtered.map(v=>renderVehicle(v,maxSpeed)).join(''):`<tr><td colspan="5" class="empty"><span class="empty-icon">${icon('search')}</span><strong>${title}</strong><p>${text}</p></td></tr>`;
+ // Preserve unchanged rows between polls, including keyboard and scroll context.
+ if(lastFleetHtml!==html){$('#fleet').innerHTML=html;lastFleetHtml=html;}
+ $('#fleet-count').textContent=`${filtered.length} unidades`;
+ $('#result-count').textContent=`Mostrando ${filtered.length} de ${state.vehicles.length} vehículos`;
+ $('#fleet').setAttribute('aria-busy','false');
+}
+function updateMetrics(data){
+ const values={total:data.resumen.total,moving:data.resumen.en_movimiento,stopped:data.resumen.detenidos,waiting:data.resumen.esperando_viaje,alerts:data.resumen.alertas};
+ for(const [id,value] of Object.entries(values)){const el=$(`#${id}`);if(el.textContent!==String(value)){el.textContent=value;el.closest('.metric').classList.remove('changed');void el.offsetWidth;el.closest('.metric').classList.add('changed');}}
+ $('#distribution').innerHTML=[['moving','var(--green)'],['stopped','var(--amber)'],['waiting','var(--violet)'],['alerts','var(--red)']].map(([key,color])=>`<span style="width:${values.total?values[key]/values.total*100:0}%;background:${color}"></span>`).join('');
+ $('#overview-caption').textContent=values.total?`${values.moving} en movimiento · ${values.waiting} esperando · ${values.alerts} en alerta`:'Sin vehículos registrados';
+}
+// Schedule after completion and use a timeout to avoid overlapping/stuck requests.
+async function refresh(manual=false){
+ if(state.busy)return;
+ clearTimeout(state.timer);state.busy=true;$('#refresh').disabled=true;$('#refresh').classList.add('refreshing');
+ if(manual||!state.lastSuccess)setConnection('loading','Sincronizando…');
+ const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),7000);
+ try{
+  const response=await fetch('/api/vehiculos',{cache:'no-store',signal:controller.signal});
+  if(!response.ok)throw new Error(`HTTP ${response.status}`);
+  const data=await response.json();
+  if(!Array.isArray(data.vehiculos)||!data.resumen||!Number.isFinite(Date.parse(data.actualizado)))throw new Error('Respuesta no válida');
+  observeChanges(data.vehiculos);state.vehicles=data.vehiculos;state.lastSuccess=data.actualizado;state.failures=0;
+  updateMetrics(data);renderFleet();$('#error').hidden=true;
+  $('#updated').textContent=`Actualizado ${dateFormat.format(new Date(data.actualizado))}`;$('#updated').dateTime=data.actualizado;
+  setConnection('connected','Conectado · Esperando cambios');
+ }catch(error){
+  state.failures++;const offline=!navigator.onLine;
+  setConnection(offline||state.failures>=3?'offline':'error',offline||state.failures>=3?'Desconectado':'Error de conexión');
+  $('#error').textContent=`${offline?'El navegador informa que no hay conexión.':'No se pudo consultar el dashboard local.'} ${state.lastSuccess?'Se conservan los últimos datos recibidos; pueden estar desactualizados.':'Todavía no se recibieron datos.'} Reintentando automáticamente. Podés usar Actualizar.`;$('#error').hidden=false;
+  if(state.vehicles===null){$('#fleet').innerHTML='<tr><td colspan="5" class="empty"><strong>Sin datos disponibles</strong><p>Comprobá que el servidor local esté iniciado en 127.0.0.1:8000.</p></td></tr>';$('#fleet').setAttribute('aria-busy','false');$('#fleet-count').textContent='Sin datos';$('#result-count').textContent='Esperando conexión';}
+ }finally{clearTimeout(timeout);state.busy=false;$('#refresh').disabled=false;$('#refresh').classList.remove('refreshing');state.timer=setTimeout(refresh,2000);}
+}
+$('.filters').addEventListener('submit',event=>event.preventDefault());
+$('#refresh').addEventListener('click',()=>refresh(true));
+$('#search').addEventListener('input',renderFleet);$('#status').addEventListener('change',renderFleet);$('#sort').addEventListener('change',renderFleet);
+window.addEventListener('online',()=>refresh(true));
+// Losing Internet access does not necessarily disconnect the loopback server.
+window.addEventListener('offline',()=>refresh(true));
+// El chat tiene su propio ciclo; sus errores no interrumpen el monitoreo.
+const chat={busy:false,provider:'nube',history:{nube:[],local:[]}};
+const chatMessages=()=>$('#chat-messages-'+chat.provider);
+const chatOpen=document.createElement('button');
+chatOpen.className='button button-assistant';chatOpen.id='chat-open';
+chatOpen.innerHTML=icon('chat')+'<span>Asistente IA</span>';
+chatOpen.setAttribute('aria-controls','chat-panel');chatOpen.setAttribute('aria-expanded','false');
+$('.header-actions').append(chatOpen);
+const fleetLauncher=$('#fleet-launcher'),chatPanel=$('#chat-panel');
+let chatOpener=chatOpen,closingTimer;
+function openFleetAI(event){
+ if(chatPanel.open)return;
+ chatOpener=event.currentTarget;chatPanel.classList.remove('is-closing');chatPanel.showModal();
+ chatOpen.setAttribute('aria-expanded','true');fleetLauncher.setAttribute('aria-expanded','true');fleetLauncher.hidden=true;
+ $('#chat-input').focus();chatMessages().lastElementChild?.scrollIntoView({block:'nearest'});
+}
+function closeFleetAI(){
+ if(chatPanel.classList.contains('is-closing'))return;
+ chatPanel.classList.add('is-closing');
+ closingTimer=setTimeout(()=>chatPanel.close(),matchMedia('(prefers-reduced-motion: reduce)').matches?0:180);
+}
+chatOpen.addEventListener('click',openFleetAI);fleetLauncher.addEventListener('click',openFleetAI);
+$('#chat-close').addEventListener('click',closeFleetAI);
+chatPanel.addEventListener('cancel',event=>{event.preventDefault();closeFleetAI();});
+chatPanel.addEventListener('close',()=>{clearTimeout(closingTimer);chatPanel.classList.remove('is-closing');chatOpen.setAttribute('aria-expanded','false');fleetLauncher.setAttribute('aria-expanded','false');fleetLauncher.hidden=false;chatOpener.focus();});
+const fleetWelcome='¡Hola! 👋 Soy Fleet AI, tu copiloto inteligente.\n\nPuedo ayudarte a analizar la flota, identificar anomalías y responder preguntas sobre tus vehículos.\n\n¿Qué te gustaría consultar?';
+const quickActions=[
+ ['Resumen de la flota actual','Resumí el estado actual de la flota','activity','var(--green)'],
+ ['Vehículos detenidos','Mostrá los vehículos detenidos de la flota','pause','var(--amber)'],
+ ['Alertas y anomalías','Mostrá las alertas actuales de la flota','alert','var(--red)'],
+ ['Historial de un vehículo','¿Disponés de historial de un vehículo o solo de su estado actual?','clock','var(--violet)'],
+ ['Generar reporte','Resumí el estado actual de la flota con los datos disponibles','grid','var(--cyan)']
+];
+for(const [label,prompt,symbol,color] of quickActions){
+ const button=document.createElement('button');button.type='button';button.dataset.prompt=prompt;
+ button.innerHTML='<span class="quick-icon" style="--accent:'+color+'">'+icon(symbol)+'</span><span>'+label+'</span><span class="quick-chevron" aria-hidden="true">›</span>';
+ if(label==='Generar reporte')button.title='Resumen del estado actual en el chat';
+ if(label==='Historial de un vehículo')button.title='Consultar disponibilidad; el sistema no almacena historial de vehículos';
+ $('#chat-suggestions').append(button);
+}
+function addChatMessage(role,text){
+ const message=document.createElement('div'),label=document.createElement('strong'),content=document.createElement('span');
+ message.className='chat-message';message.dataset.role=role;
+ label.textContent=role==='usuario'?'Vos':'Fleet AI';content.textContent=text;
+ if(role!=='usuario'){const avatar=document.createElementNS('http://www.w3.org/2000/svg','svg');avatar.classList.add('fleet-mascot');avatar.setAttribute('aria-hidden','true');const use=document.createElementNS('http://www.w3.org/2000/svg','use');use.setAttribute('href','#fleet-robot');avatar.append(use);message.append(avatar);}
+ message.append(label,content);chatMessages().append(message);
+ while(chatMessages().children.length>40)chatMessages().firstElementChild.remove();
+ if(chatPanel.open)message.scrollIntoView({block:'nearest'});
+ return message;
+}
+function addConfirmation(message,proposal){
+ if(!proposal||typeof proposal.token!=='string')return;
+ const actions=document.createElement('div');actions.className='chat-confirm';
+ for(const [confirm,label] of [[true,'Confirmar cambio'],[false,'Cancelar']]){
+  const button=document.createElement('button');button.type='button';button.className='button';button.textContent=label;
+  button.addEventListener('click',()=>{
+   if(chat.busy||actions.dataset.used)return;
+   actions.dataset.used='true';
+   sendChat(confirm?'Confirmar cambio':'Cancelar operación',{confirmacion:proposal.token,confirmar:confirm});
+  });
+  actions.append(button);
+ }
+ message.append(actions);if(chatPanel.open)message.scrollIntoView({block:'nearest'});
+}
+async function sendChat(message,confirmation=null){
+ message=message.trim();if(chat.busy||!message)return;
+ if(message.length>1000){$('#chat-status').textContent='Usá hasta 1000 caracteres.';return;}
+ chat.busy=true;chatPanel.dataset.busy='true';addChatMessage('usuario',message);$('#chat-input').value='';
+ $('#chat-status').textContent=confirmation?'Procesando operación…':chat.provider==='local'?'Consultando a Ollama… La primera carga puede tardar hasta 2 minutos.':'Consultando a Gemini…';$('#chat-status').dataset.error='false';
+ chatMessages().setAttribute('aria-busy','true');$('#chat-provider').disabled=true;
+ for(const button of document.querySelectorAll('#chat-send,#chat-suggestions button,#chat-panel .chat-message button'))button.disabled=true;
+ const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),chat.provider==='local'?150000:45000);
+ try{
+  const response=await fetch('/api/asistente',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(confirmation||{mensaje:message,historial:chat.history[chat.provider],proveedor:chat.provider}),signal:controller.signal});
+  const data=await response.json();
+  if(!response.ok)throw new Error(data.error||'No se pudo consultar el asistente.');
+  if(typeof data.respuesta!=='string')throw new Error('El asistente no devolvió una respuesta válida.');
+  const node=addChatMessage('asistente',data.respuesta);addConfirmation(node,data.propuesta);
+  if(!confirmation)chat.history[chat.provider]=[...chat.history[chat.provider],message].slice(-4);
+  $('#chat-status').textContent=data.propuesta?'Pendiente de confirmación. Todavía no se modificó la flota.':confirmation?'Operación procesada.':'Respuesta basada en una nueva consulta de la flota.';
+  if(confirmation)refresh(true);
+ }catch(error){
+  $('#chat-status').dataset.error='true';
+  $('#chat-status').textContent=error.name==='AbortError'?(confirmation?'No se pudo recibir el resultado. Consultá la flota antes de repetir la operación.':'La consulta tardó demasiado. Podés intentar nuevamente.'):error instanceof TypeError?(confirmation?'No se recibió el resultado. Consultá la flota antes de repetir la operación.':'No se pudo conectar con el asistente local.'):error.message;
+ }finally{
+  clearTimeout(timeout);chat.busy=false;chatPanel.dataset.busy='false';chatMessages().setAttribute('aria-busy','false');$('#chat-provider').disabled=false;
+  for(const button of document.querySelectorAll('#chat-send,#chat-suggestions button,#chat-panel .chat-message button'))button.disabled=Boolean(button.closest('.chat-confirm')?.dataset.used);
+  if($('#chat-panel').open)$('#chat-input').focus();
+ }
+}
+$('#chat-form').addEventListener('submit',event=>{event.preventDefault();sendChat($('#chat-input').value);});
+$('#chat-input').addEventListener('keydown',event=>{if(event.key==='Enter'&&!event.shiftKey&&!event.isComposing){event.preventDefault();$('#chat-form').requestSubmit();}});
+$('#chat-suggestions').addEventListener('click',event=>{const button=event.target.closest('button');if(button&&!button.disabled)sendChat(button.dataset.prompt);});
+$('#chat-provider').addEventListener('change',()=>{
+ if(chat.busy){$('#chat-provider').value=chat.provider;return;}
+ chat.provider=$('#chat-provider').value;
+ $('#chat-input').value='';
+ $('#chat-messages-nube').hidden=chat.provider!=='nube';$('#chat-messages-local').hidden=chat.provider!=='local';
+ $('#chat-mode').textContent=chat.provider==='local'?'OLLAMA · GEMMA 3 4B · LOCAL':'GEMINI · NUBE';
+ $('#chat-note').textContent=chat.provider==='local'?'Tus pedidos se procesan en este equipo con Ollama y gemma3:4b. El historial local no se comparte con Gemini. Cada cambio requiere tu confirmación.':'Las consultas y los datos actuales de la flota se envían a Gemini. No incluyas secretos. Cada cambio requiere tu confirmación.';
+ $('#chat-status').textContent='';$('#chat-status').dataset.error='false';
+ if(!chatMessages().children.length)addChatMessage('asistente',fleetWelcome);
+ $('#chat-input').focus();
+});
+addChatMessage('asistente',fleetWelcome);
+refresh();
+</script></body></html>
