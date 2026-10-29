@@ -7,9 +7,13 @@ from errores_asistente import ErrorAsistente
 from ollama_client import interpretar as interpretar_local
 from acciones_flota import validar_campos
 from skills_flota import confirmar, invocar, skill_para_operacion, validar_invocacion
+from multiagente import negociar
+from escenario_flota import validar_solicitud
 
-FUERA_DE_ALCANCE = "Solo puedo ayudarte con el monitor de flota. Podés consultarme por vehículos, estados y alertas"
-PEDIR_DETALLES = "Podés agregar, actualizar o eliminar un vehículo por vez. Indicá la operación, la patente o identificador y los datos que querés cambiar."
+FUERA_DE_ALCANCE = "Solo puedo ayudarte con el monitor de flota. Podés consultar vehículos, estados y alertas, o pedir altas, cambios y bajas con confirmación."
+PEDIR_DETALLES = ('Podés agregar, actualizar o eliminar un vehículo por vez. Indicá la operación, la patente o identificador y los datos que querés cambiar. '
+                  'Podés cambiar también zona ficticia, tarifa base y mínimo base. '
+                  'Para dejarlo en Esperando viaje, escribí por ejemplo: «Poné ABC123 en Esperando viaje», reemplazando ABC123 por la patente real. Se propondrá velocidad 0 y se conservarán los minutos detenido; deberás confirmar el cambio.')
 MAX_MENSAJE = 1000
 MAX_HISTORIAL = 4
 MAX_CONTEXTO = 60000
@@ -26,10 +30,14 @@ def validar_entrada(body):
                 or type(body["confirmar"]) is not bool):
             raise ValueError("Confirmación inválida.")
         return None, []
-    if set(body) - {"mensaje", "historial", "proveedor"}:
+    if set(body) - {"mensaje", "historial", "proveedor", "solicitud"}:
         raise ValueError("Campos no admitidos.")
-    if body.get("proveedor", "nube") not in ("nube", "local"):
+    if body.get("proveedor", "nube") not in ("nube", "local", "multiagente"):
         raise ValueError("Proveedor no permitido.")
+    if "solicitud" in body:
+        if body.get("proveedor") != "multiagente" or body["solicitud"] is None:
+            raise ValueError("El viaje ficticio solo se admite en el modo multiagente.")
+        validar_solicitud(body["solicitud"])
     mensaje, historial = body.get("mensaje"), body.get("historial", [])
     if not isinstance(mensaje, str) or not 1 <= len(mensaje.strip()) <= MAX_MENSAJE:
         raise ValueError("Escribí una consulta de entre 1 y 1000 caracteres.")
@@ -57,6 +65,9 @@ def validar_alcance(plan):
             raise ValueError("No se identificó un pedido explícito de modificación.")
         if not escritura and cambios:
             raise ValueError("Una consulta de lectura no puede incluir cambios.")
+        if escritura and cambios.get("esperando_viaje") is True and "velocidad" not in cambios:
+            # Pedir espera implica detener: no depender de que el modelo incluya el cero.
+            plan = {**plan, "cambios": {**plan["cambios"], "velocidad": 0}}
     except ValueError as error:
         raise ErrorAsistente(str(error)) from None
     try:
@@ -74,6 +85,8 @@ def responder(body, obtener_snapshot):
     mensaje, historial = validar_entrada(body)
     if "confirmacion" in body:
         return confirmar(body["confirmacion"], body["confirmar"])["respuesta"]
+    if body.get("proveedor") == "multiagente":
+        return negociar(mensaje, historial, body.get("solicitud"))
     try:
         snapshot = obtener_snapshot()  # Nueva lectura por consulta, sin usar estado del chat.
     except Exception:

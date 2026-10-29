@@ -18,6 +18,58 @@ def escritura(operacion, objetivo=None, ids=None, **campos):
 
 
 class AccionesTest(BaseTemporal):
+    def test_activar_espera_desde_chat_en_ambos_modos_solo_tras_confirmar(self):
+        for proveedor, identificador in (("nube", 2), ("local", 1)):
+            with self.subTest(proveedor=proveedor):
+                antes = database.consultar_vehiculo(identificador)
+                # Incluso si el modelo omite velocidad, activar espera propone detener.
+                interpretacion = escritura('actualizar', ids=[identificador], esperando_viaje=True)
+                with patch('asistente.interpretar', return_value=interpretacion) as nube, \
+                     patch('asistente.interpretar_local', return_value=interpretacion) as local:
+                    propuesta = asistente.responder({
+                        'mensaje': f'¿Podés poner la unidad {identificador} en Esperando viaje?',
+                        'proveedor': proveedor,
+                    }, dashboard.obtener_snapshot)
+                    self.assertEqual(propuesta['estado'], 'pendiente_confirmacion')
+                    self.assertEqual(database.consultar_vehiculo(identificador), antes)
+                    self.assertIn('esperando viaje: sí', propuesta['respuesta'])
+                    self.confirmar(propuesta)
+                    self.assertEqual(nube.call_count, int(proveedor == 'nube'))
+                    self.assertEqual(local.call_count, int(proveedor == 'local'))
+                despues = database.consultar_vehiculo(identificador)
+                self.assertTrue(despues['esperando_viaje'])
+                self.assertEqual(despues['velocidad'], 0)
+                self.assertEqual(despues['minutos_detenido'], antes['minutos_detenido'])
+                estado = next(v for v in dashboard.obtener_snapshot()['vehiculos'] if v['id'] == identificador)
+                self.assertFalse(estado['alerta'])
+
+    def test_espera_sin_identificar_vehiculo_pide_detalles_y_no_escribe(self):
+        antes = database.consultar_vehiculos()
+        for proveedor in ('nube', 'local'):
+            with self.subTest(proveedor=proveedor), \
+                 patch('asistente.interpretar', return_value=plan('modificacion')), \
+                 patch('asistente.interpretar_local', return_value=plan('modificacion')):
+                respuesta = asistente.responder({
+                    'mensaje': 'No podes actualizar un vehiculo a "Esperando viaje"',
+                    'proveedor': proveedor,
+                }, dashboard.obtener_snapshot)
+            self.assertIn('patente', respuesta)
+            self.assertIn('Esperando viaje', respuesta)
+            self.assertNotEqual(respuesta, asistente.FUERA_DE_ALCANCE)
+            self.assertFalse(acciones_flota.PENDIENTES)
+        self.assertEqual(database.consultar_vehiculos(), antes)
+
+    def test_cancelar_espera_conserva_movimiento(self):
+        # Arrange: preparar una propuesta sobre una unidad en movimiento.
+        antes = database.consultar_vehiculo(2)
+        propuesta = self.proponer(escritura('actualizar', ids=[2], esperando_viaje=True))
+
+        # Act: cancelar la propuesta.
+        self.confirmar(propuesta, False)
+
+        # Assert: conservar todos los datos originales.
+        self.assertEqual(database.consultar_vehiculo(2), antes)
+
     def proponer(self, resultado):
         with patch('asistente.interpretar', return_value=resultado):
             return asistente.responder({'mensaje': 'Pedido de flota'}, dashboard.obtener_snapshot)
@@ -73,10 +125,17 @@ class AccionesTest(BaseTemporal):
         self.assertEqual(database.consultar_vehiculos(), [])
 
     def test_cambio_concurrente_no_se_sobrescribe(self):
+        # Arrange: modificar la unidad después de preparar la propuesta.
         propuesta = self.proponer(escritura('actualizar', ids=[1], velocidad=40))
         database.actualizar_estado_vehiculo(1, 20, 0, False)
-        with self.assertRaisesRegex(ValueError, 'cambió'):
+
+        # Act: intentar confirmar sobre un estado que ya cambió.
+        # assertRaises captura la excepción esperada y comprueba su tipo.
+        with self.assertRaises(ValueError) as error:
             self.confirmar(propuesta)
+
+        # Assert: informar el conflicto y conservar el cambio concurrente.
+        self.assertIn('cambió', str(error.exception))
         self.assertEqual(database.consultar_vehiculo(1)['velocidad'], 20)
 
     def test_propuesta_vencida_o_inventada_no_escribe(self):

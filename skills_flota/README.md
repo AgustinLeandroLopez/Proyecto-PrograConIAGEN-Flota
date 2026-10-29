@@ -37,6 +37,15 @@ print(propuesta["respuesta"])
 ```
 
 Las invocaciones Python usan por defecto el mismo modo de propuesta del chat.
+`cambios` admite también `zona`, `tarifa_base` y `precio_minimo` opcionales.
+Se guardan en SQLite: zona Centro/Norte/Sur/Oeste, precios base enteros de 1 a
+1000000 y mínimo no mayor que tarifa. Una actualización conserva los omitidos;
+el alta usa Centro/4000/3000 como valores iniciales. El mínimo guardado es base:
+la negociación agrega los costos de recorrido para calcular su mínimo total.
+También admite `en_viaje` opcional. Activarlo desactiva espera; volver a esperar
+finaliza el viaje. `consultar_flota` con operación `viajes` lista los activos.
+Los acuerdos multiagente preparan una asignación mediante `gestionar_vehiculos`;
+requieren confirmar el token antes de cambiar la unidad.
 `canal="mcp"` se reserva al adaptador de confianza que ejecuta el pedido explícito
 del cliente MCP. El modelo y el navegador no pueden seleccionar ese canal.
 

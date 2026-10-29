@@ -2,7 +2,7 @@ import json
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qs
 
 from asistente import responder, validar_entrada
 from errores_asistente import ErrorAsistente
@@ -10,6 +10,8 @@ from configuracion import cargar_configuracion
 
 from database import inicializar_base_de_datos
 from skills_flota.herramientas import obtener_snapshot
+from multiagente import candidatos_actuales
+from escenario_flota import catalogo, cotizar, validar_solicitud
 
 
 HOST = "127.0.0.1"
@@ -49,8 +51,11 @@ class DashboardHandler(BaseHTTPRequestHandler):
             self.connection.settimeout(5)
             body = json.loads(self.rfile.read(longitud))
             validar_entrada(body)
-        except (ValueError, UnicodeError, OSError):
-            self.responder_json(400, {"error": "Consulta inválida. Usá hasta 1000 caracteres y cuatro mensajes de historial."})
+        except ValueError as error:
+            self.responder_json(400, {"error": str(error)})
+            return
+        except (UnicodeError, OSError):
+            self.responder_json(400, {"error": "Consulta JSON inválida."})
             return
         if not CHAT_LOCK.acquire(blocking=False):
             self.responder_json(429, {"error": "Ya hay una consulta en curso. Esperá a que termine."})
@@ -82,6 +87,22 @@ class DashboardHandler(BaseHTTPRequestHandler):
             self.send_header("Content-Length", str(len(contenido)))
             self.end_headers()
             self.wfile.write(contenido)
+            return
+
+        if ruta == "/api/escenario-negociacion":
+            try:
+                parametros = parse_qs(urlparse(self.path).query, keep_blank_values=True)
+                if set(parametros) - {"origen", "destino"} or any(len(v) != 1 for v in parametros.values()):
+                    raise ValueError("Parámetros del escenario inválidos.")
+                solicitud = validar_solicitud()
+                solicitud.update({k: v[0] for k, v in parametros.items()})
+                solicitud = validar_solicitud(solicitud)
+                self.responder_json(200, {**catalogo(), "solicitud": solicitud,
+                                         "candidatos": cotizar(candidatos_actuales(), solicitud)})
+            except ValueError as error:
+                self.responder_json(400, {"error": str(error)})
+            except Exception:
+                self.responder_json(500, {"error": "No se pudo consultar el escenario ficticio."})
             return
 
         self.send_error(404, "Recurso no encontrado")

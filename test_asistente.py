@@ -31,7 +31,7 @@ class BaseTemporal(unittest.TestCase):
         cambio.start()
         self.addCleanup(cambio.stop)
         database.inicializar_base_de_datos()
-        database.agregar_vehiculo("WAIT123", 0, 90, True)
+        database.agregar_vehiculo("WAIT123", 0, 90, True, zona="Oeste", tarifa_base=4200, precio_minimo=3200)
 
 
 class AsistenteTest(BaseTemporal):

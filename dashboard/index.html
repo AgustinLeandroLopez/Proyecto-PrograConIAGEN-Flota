@@ -1101,12 +1101,17 @@ tbody tr.recent {
 .chat-panel::backdrop {background:#03091445;}
 .chat-panel[open] {display:flex;flex-direction:column;animation:fleet-enter .22s ease-out;}
 .chat-panel.is-closing {opacity:0;transform:translateX(28px);transition:opacity .18s,transform .18s;}
+.chat-panel.is-maximized {inset:0;width:100%;height:100dvh;border-radius:0;}
 .chat-head {display:flex;align-items:center;padding:16px 14px 12px;gap:10px;border-bottom:1px solid var(--line);background:radial-gradient(ellipse at 15% 40%,#22d3ee12,transparent 65%);}
 .chat-head h2 {font-size:21px;letter-spacing:-.6px;}
 .chat-subtitle {font-size:12px;color:var(--muted);margin-top:2px;}
 .chat-service {font-size:10px;color:var(--muted);margin-top:7px;}
-.chat-close {align-self:flex-start;margin-left:auto;min-width:36px;min-height:36px;border:1px solid transparent;border-radius:10px;background:transparent;color:var(--muted);font-size:24px;line-height:1;}
-.chat-close:hover {background:var(--surface);color:var(--text);border-color:var(--line);}
+.chat-window-actions {display:flex;gap:4px;align-self:flex-start;margin-left:auto;flex:none;}
+.chat-window-button {display:grid;place-items:center;width:36px;height:36px;border:1px solid transparent;border-radius:10px;background:transparent;color:var(--muted);font-size:24px;line-height:1;}
+.chat-window-button:hover {background:var(--surface);color:var(--text);border-color:var(--line);}
+.chat-window-button:focus-visible {outline:2px solid var(--cyan);outline-offset:2px;}
+.chat-window-button svg {width:18px;height:18px;}
+.chat-window-button[aria-pressed="false"] .restore-icon,.chat-window-button[aria-pressed="true"] .maximize-icon {display:none;}
 .chat-provider {display:grid;gap:5px;padding:12px 18px 0;font-size:11px;color:var(--muted);}
 .chat-provider select {width:100%;padding:9px;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--text);font:inherit;}
 .chat-note {padding:8px 18px 12px;color:var(--muted);font-size:11px;border-bottom:1px solid var(--line);}
@@ -1119,13 +1124,25 @@ tbody tr.recent {
 .chat-message[data-role="usuario"] {align-self:flex-end;max-width:90%;margin-left:28px;border-color:#22d3ee45;background:#113041;border-radius:16px 4px 16px 16px;}
 .chat-message strong {display:block;color:var(--cyan);font-size:10px;letter-spacing:.3px;margin-bottom:4px;}
 .chat-message[data-role="usuario"] strong {color:var(--muted);}
-.chat-suggestions {display:grid;gap:7px;padding:14px 18px 20px;}
-.chat-suggestions h3 {font-size:12px;margin:0 0 3px;}
-.chat-suggestions button {display:flex;align-items:center;gap:10px;width:100%;background:linear-gradient(120deg,#172238,#131b2d);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:8px 10px;text-align:left;font:inherit;font-size:11px;transition:border-color .15s,background .15s;}
+.chat-quick-actions {flex:none;margin:0 14px;border-top:1px solid var(--line);}
+.chat-quick-actions summary {width:fit-content;padding:9px 0;cursor:pointer;color:var(--muted);font-size:11px;}
+.chat-quick-actions summary:hover {color:var(--cyan);}
+.chat-quick-actions summary:focus-visible {outline:2px solid var(--cyan);outline-offset:2px;border-radius:4px;}
+.scenario {margin:12px 14px 0;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--bg);font-size:11px;}
+.scenario summary {cursor:pointer;color:var(--cyan);line-height:1.5;}
+.scenario-fields {display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;}
+.scenario-fields label {display:grid;gap:4px;color:var(--muted);min-width:0;}
+.scenario-fields label:last-child {grid-column:1/-1;}
+.scenario-fields select,.scenario-fields input {width:100%;min-width:0;padding:7px;border:1px solid var(--line);border-radius:7px;background:var(--surface);color:var(--text);font:inherit;}
+.scenario p {margin-top:8px;color:var(--muted);line-height:1.6;}
+.scenario-start {margin-top:10px;width:100%;justify-content:center;border-color:var(--cyan);background:#113041;color:var(--cyan);font-size:12px;}
+.scenario-start:hover {background:#1b3044;}
+@media(min-width:760px) {.chat-panel.is-maximized .scenario-fields {grid-template-columns:repeat(3,minmax(0,1fr));}.chat-panel.is-maximized .scenario-fields label:last-child {grid-column:auto;}.chat-panel.is-maximized .scenario-start {width:auto;min-width:180px;}}
+.chat-suggestions {display:flex;flex-wrap:wrap;gap:6px;padding:0 0 8px;max-height:116px;overflow-y:auto;scrollbar-width:thin;}
+.chat-suggestions button {display:flex;align-items:center;gap:6px;min-height:32px;max-width:100%;background:linear-gradient(120deg,#172238,#131b2d);color:var(--text);border:1px solid var(--line);border-radius:20px;padding:5px 9px;text-align:left;font:inherit;font-size:11px;transition:border-color .15s,background .15s;}
 .chat-suggestions button:hover {border-color:var(--cyan);background:#1b3044;}
-.quick-icon {display:grid;place-items:center;width:32px;height:32px;border-radius:9px;color:var(--accent,var(--cyan));background:color-mix(in srgb,var(--accent,var(--cyan)) 12%,transparent);flex:none;}
-.quick-icon svg {width:19px;height:19px;}
-.quick-chevron {margin-left:auto;font-size:20px;color:var(--muted);}
+.quick-icon {display:grid;place-items:center;width:18px;height:18px;color:var(--accent,var(--cyan));flex:none;}
+.quick-icon svg {width:15px;height:15px;}
 .chat-status {padding:0 18px;color:var(--cyan);font-size:11px;max-height:76px;overflow:auto;}
 .chat-status:not(:empty) {padding-top:8px;padding-bottom:8px;}
 .chat-status[data-error="true"] {color:var(--red);background:#fb80900a;}
@@ -1198,21 +1215,35 @@ tbody tr.recent {
 <article class="metric" style="--accent:var(--violet)"><div class="metric-top"><span>Esperando viaje</span><span class="metric-icon"><svg class="icon"><use href="#i-clock"/></svg></span></div><strong class="metric-value" id="waiting">—</strong><p class="metric-foot"><span class="dot"></span>Disponibles para asignación</p></article>
 <article class="metric" style="--accent:var(--red)"><div class="metric-top"><span>Alertas activas</span><span class="metric-icon"><svg class="icon"><use href="#i-alert"/></svg></span></div><strong class="metric-value" id="alerts">—</strong><p class="metric-foot"><span class="dot"></span>Requieren atención</p></article></section>
 <section class="overview" aria-label="Distribución de estados"><span class="overview-title">Pulso de la flota</span><div class="distribution" id="distribution" aria-hidden="true"></div><span class="overview-caption" id="overview-caption">Esperando primera sincronización</span></section>
-<div class="content-grid"><section class="panel" id="vehiculos" aria-labelledby="fleet-title"><div class="panel-header"><div><h2 id="fleet-title">Vehículos de la flota</h2><p id="fleet-subtitle">Estado y disponibilidad de cada unidad</p></div><span class="count-label" id="fleet-count">Cargando…</span></div>
-<form class="filters" role="search"><div class="search"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg><label class="sr-only" for="search">Buscar por patente</label><input id="search" type="search" placeholder="Buscar patente…" autocomplete="off"></div><label class="sr-only" for="status">Filtrar por estado</label><select id="status"><option value="all">Todos los estados</option><option value="moving">En movimiento</option><option value="stopped">Detenidos</option><option value="waiting">Esperando viaje</option><option value="alert">En alerta</option></select><label class="sr-only" for="sort">Ordenar vehículos</label><select id="sort"><option value="plate">Patente: A–Z</option><option value="speed-desc">Velocidad: mayor primero</option><option value="speed-asc">Velocidad: menor primero</option><option value="state">Estado: prioridad</option></select></form>
-<div class="table-scroll"><table aria-label="Estado operativo de vehículos"><thead><tr><th scope="col">Vehículo / patente</th><th scope="col">Estado operativo</th><th scope="col">Velocidad</th><th scope="col">Detenido</th><th scope="col">Alerta</th></tr></thead><tbody id="fleet" aria-busy="true"><tr><td colspan="5" class="empty"><span class="sr-only">Cargando flota</span><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></td></tr></tbody></table></div><div class="table-footer"><span id="result-count" role="status">Consultando vehículos…</span><span>Actualización automática cada 2 s</span></div></section>
+<div class="content-grid"><section class="panel" id="vehiculos" aria-labelledby="fleet-title"><div class="panel-header"><div><h2 id="fleet-title">Vehículos de la flota</h2><p id="fleet-subtitle">Estado y disponibilidad de cada unidad · Zonas y precios ficticios ? Zonas y precios ficticios</p></div><span class="count-label" id="fleet-count">Cargando…</span></div>
+<form class="filters" role="search"><div class="search"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg><label class="sr-only" for="search">Buscar por patente</label><input id="search" type="search" placeholder="Buscar patente…" autocomplete="off"></div><label class="sr-only" for="status">Filtrar por estado</label><select id="status"><option value="all">Todos los estados</option><option value="moving">En movimiento</option><option value="stopped">Detenidos</option><option value="waiting">Esperando viaje</option><option value="trip">En viaje</option><option value="alert">En alerta</option></select><label class="sr-only" for="sort">Ordenar vehículos</label><select id="sort"><option value="plate">Patente: A–Z</option><option value="speed-desc">Velocidad: mayor primero</option><option value="speed-asc">Velocidad: menor primero</option><option value="state">Estado: prioridad</option></select></form>
+<div class="table-scroll"><table aria-label="Estado operativo de vehículos"><thead><tr><th scope="col">Vehículo / patente</th><th scope="col">Estado operativo</th><th scope="col">Velocidad</th><th scope="col">Detenido</th><th scope="col">Zona</th><th scope="col">Tarifa base</th><th scope="col">Mínimo base</th><th scope="col">Alerta</th></tr></thead><tbody id="fleet" aria-busy="true"><tr><td colspan="8" class="empty"><span class="sr-only">Cargando flota</span><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></td></tr></tbody></table></div><div class="table-footer"><span id="result-count" role="status">Consultando vehículos…</span><span>Actualización automática cada 2 s</span></div></section>
 <div class="activity-column"><section class="panel activity-panel" id="actividad" aria-labelledby="activity-title"><div class="panel-header"><h2 id="activity-title">Actividad reciente</h2><span class="live-label"><span class="dot"></span>SESIÓN</span></div><p class="activity-note">Cambios observados mientras esta página está abierta.</p><ol class="event-list" id="events"></ol><div id="activity-empty" class="empty activity-empty"><span class="empty-icon"><svg class="icon"><use href="#i-activity"/></svg></span><strong>Todo listo para monitorear</strong><p>Las incorporaciones y cambios de estado aparecerán aquí al detectarse.</p></div><div class="activity-footer" id="activity-status" role="status">Esperando la primera consulta</div></section></div></div>
 <footer class="page-footer"><span>Monitor de flota / Datos locales · Asistente en nube o local</span><span id="footer-sync">La conexión se verifica en cada consulta</span></footer></main></div>
 <button class="fleet-launcher" id="fleet-launcher" type="button" aria-label="Abrir Fleet AI, tu asistente de operaciones" aria-controls="chat-panel" aria-expanded="false"><span class="fleet-launcher-label">¿Necesitás ayuda?</span><svg class="fleet-mascot" aria-hidden="true"><use href="#fleet-robot"/></svg></button>
 <dialog class="chat-panel" id="chat-panel" aria-labelledby="chat-title" aria-describedby="chat-subtitle">
- <div class="chat-head"><svg class="fleet-mascot" aria-hidden="true"><use href="#fleet-robot"/></svg><div><h2 id="chat-title">Fleet AI</h2><p class="chat-subtitle" id="chat-subtitle">Tu asistente de operaciones</p><p class="chat-service">Disponibilidad del modelo sin comprobar</p></div><button class="chat-close" id="chat-close" type="button" aria-label="Cerrar asistente">&times;</button></div>
- <label class="chat-provider" for="chat-provider"><span id="chat-mode">GEMINI · NUBE</span><select id="chat-provider"><option value="nube">Asistente IA en la nube · Gemini</option><option value="local">Asistente IA local · Gemma 3 4B</option></select></label>
+ <div class="chat-head"><svg class="fleet-mascot" aria-hidden="true"><use href="#fleet-robot"/></svg><div><h2 id="chat-title">Fleet AI</h2><p class="chat-subtitle" id="chat-subtitle">Tu asistente de operaciones</p><p class="chat-service">Disponibilidad del modelo sin comprobar</p></div><div class="chat-window-actions"><button class="chat-window-button" id="chat-maximize" type="button" aria-label="Maximizar Fleet AI" title="Maximizar Fleet AI" aria-controls="chat-panel" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect class="maximize-icon" x="4" y="4" width="16" height="16" rx="2"/><g class="restore-icon"><path d="M8 8V4h12v12h-4"/><rect x="4" y="8" width="12" height="12" rx="1"/></g></svg></button><button class="chat-window-button chat-close" id="chat-close" type="button" aria-label="Cerrar asistente" title="Cerrar asistente">&times;</button></div></div>
+ <label class="chat-provider" for="chat-provider"><span id="chat-mode">GEMINI · NUBE</span><select id="chat-provider"><option value="nube">Asistente IA en la nube · Gemini</option><option value="local">Asistente IA local · Gemma 3 4B</option><option value="multiagente">Selección multiagente · Gemini + Gemma</option></select></label>
  <p class="chat-note" id="chat-note">Las consultas y los datos actuales de la flota se envían a Gemini. No incluyas secretos. Cada cambio requiere tu confirmación.</p>
  <div class="chat-body">
+  <details class="scenario" id="scenario-settings" hidden open>
+   <summary id="scenario-summary">Viaje ficticio · Configurar</summary>
+   <div class="scenario-fields">
+    <label>Retiro<select id="scenario-origin" aria-label="Zona de retiro"><option value="">Cargando zonas…</option></select></label>
+    <label>Destino<select id="scenario-destination" aria-label="Zona de destino"><option value="">Cargando zonas…</option></select></label>
+    <label>Presupuesto máximo (pesos ficticios)<input id="scenario-budget" type="number" min="1" max="1000000" step="1" value="9000" inputmode="numeric" required></label>
+   </div>
+   <button class="button scenario-start" id="scenario-start" type="button" disabled>Iniciar negociación</button>
+   <p id="scenario-status" role="status" hidden></p>
+  </details>
   <div class="chat-messages" id="chat-messages-nube" role="log" aria-label="Conversación con Gemini" aria-live="polite"></div>
   <div class="chat-messages" id="chat-messages-local" role="log" aria-label="Conversación con Ollama" aria-live="polite" hidden></div>
-  <div class="chat-suggestions" id="chat-suggestions"><h3>Sugerencias rápidas</h3></div>
+  <div class="chat-messages" id="chat-messages-multiagente" role="log" aria-label="Negociación entre Gemini y Gemma" aria-live="polite" hidden></div>
  </div>
+ <details class="chat-quick-actions" id="chat-quick-actions" open>
+  <summary>Sugerencias rápidas</summary>
+  <div class="chat-suggestions" id="chat-suggestions"></div>
+ </details>
  <p class="chat-status" id="chat-status" role="status"></p>
  <form class="chat-form" id="chat-form"><label class="sr-only" for="chat-input">Consulta o pedido sobre la flota</label><textarea id="chat-input" name="mensaje" rows="2" maxlength="1000" required placeholder="Preguntame algo sobre tu flota..."></textarea><button id="chat-send" type="submit" aria-label="Enviar mensaje"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m4 12 16-8-6 16-3-7-7-1Zm7 1 9-9"/></svg></button></form>
  <p class="chat-hint">Enter para enviar · Shift+Enter para una nueva línea</p>
@@ -1223,10 +1254,10 @@ const $ = selector => document.querySelector(selector);
 const state = {vehicles:null,previous:null,events:[],recent:new Map(),busy:false,timer:null,lastSuccess:null,failures:0};
 const timeFormat = new Intl.DateTimeFormat('es-AR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
 const dateFormat = new Intl.DateTimeFormat('es-AR',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',second:'2-digit'});
-const statuses = {moving:{label:'En movimiento',color:'var(--green)',priority:3},stopped:{label:'Detenido',color:'var(--amber)',priority:1},waiting:{label:'Esperando viaje',color:'var(--violet)',priority:2},alert:{label:'En alerta',color:'var(--red)',priority:0}};
+const statuses = {moving:{label:'En movimiento',color:'var(--green)',priority:4},trip:{label:'En viaje',color:'var(--cyan)',priority:3},stopped:{label:'Detenido',color:'var(--amber)',priority:1},waiting:{label:'Esperando viaje',color:'var(--violet)',priority:2},alert:{label:'En alerta',color:'var(--red)',priority:0}};
 function escapeHtml(value){const el=document.createElement('span');el.textContent=String(value);return el.innerHTML;}
 function icon(name){return `<svg class="icon" aria-hidden="true"><use href="#i-${name}"/></svg>`;}
-function statusOf(v){return v.alerta?'alert':v.esperando_viaje?'waiting':Number(v.velocidad)>0?'moving':'stopped';}
+function statusOf(v){return v.alerta?'alert':v.en_viaje?'trip':v.esperando_viaje?'waiting':Number(v.velocidad)>0?'moving':'stopped';}
 function setConnection(mode,label){$('#connection').dataset.state=mode;$('#connection-label').textContent=label;$('#footer-sync').textContent=['error','offline'].includes(mode)?'Datos sin actualizar · Reintento automático cada 2 s':'Sincronización local · Consulta cada 2 s';}
 // Session observations, not a backend audit trail. Tool attribution is inferred.
 function observeChanges(vehicles){
@@ -1234,11 +1265,12 @@ function observeChanges(vehicles){
  if(state.previous!==null){
   for(const v of vehicles){
    const before=state.previous.get(v.id);
-   if(before&&['patente','velocidad','minutos_detenido','esperando_viaje','alerta'].every(key=>before[key]===v[key]))continue;
+   if(before&&['patente','velocidad','minutos_detenido','esperando_viaje','en_viaje','alerta','zona','tarifa_base','precio_minimo'].every(key=>before[key]===v[key]))continue;
    let title='Estado actualizado';
    if(!before)title='Vehículo incorporado';
    else if(v.alerta&&!before.alerta)title='Alerta detectada';
    else if(v.velocidad>0&&before.velocidad===0)title='Reanudó su marcha';
+   else if(v.en_viaje&&!before.en_viaje)title='En viaje';
    else if(v.esperando_viaje&&!before.esperando_viaje)title='Esperando viaje';
    else if(v.velocidad===0&&before.velocidad>0)title='Vehículo detenido';
    else if(!v.alerta&&before.alerta)title='Alerta resuelta';
@@ -1261,7 +1293,7 @@ function renderActivity(){
 }
 function renderVehicle(v,maxSpeed){
  const status=statuses[statusOf(v)],recent=(state.recent.get(v.id)||0)>Date.now();
- return `<tr class="${recent?'recent':''}"><td><div class="vehicle"><span class="vehicle-icon">${icon('truck')}</span><div><strong>${escapeHtml(v.patente)}</strong><small>Unidad ${escapeHtml(v.id)}${recent?' · Actualizada':''}</small></div></div></td><td><span class="badge" style="--badge:${status.color}"><span class="dot"></span>${status.label}</span></td><td data-label="Velocidad"><span class="speed-number">${escapeHtml(v.velocidad)} <small>km/h</small></span><div class="speed-track" title="Velocidad relativa a la mayor velocidad actual de la flota"><span style="width:${Math.max(0,Math.min(100,Number(v.velocidad)/maxSpeed*100))}%"></span></div></td><td data-label="Tiempo detenido"><span class="speed-number">${escapeHtml(v.minutos_detenido)} <span class="muted">min</span></span></td><td data-label="Alerta" class="alert-cell ${v.alerta?'critical':''}">${v.alerta?'Requiere atención':'Sin alerta'}</td></tr>`;
+ return `<tr class="${recent?'recent':''}"><td><div class="vehicle"><span class="vehicle-icon">${icon('truck')}</span><div><strong>${escapeHtml(v.patente)}</strong><small>Unidad ${escapeHtml(v.id)}${recent?' · Actualizada':''}</small></div></div></td><td><span class="badge" style="--badge:${status.color}"><span class="dot"></span>${status.label}</span></td><td data-label="Velocidad"><span class="speed-number">${escapeHtml(v.velocidad)} <small>km/h</small></span><div class="speed-track" title="Velocidad relativa a la mayor velocidad actual de la flota"><span style="width:${Math.max(0,Math.min(100,Number(v.velocidad)/maxSpeed*100))}%"></span></div></td><td data-label="Tiempo detenido"><span class="speed-number">${escapeHtml(v.minutos_detenido)} <span class="muted">min</span></span></td><td data-label="Zona">${escapeHtml(v.zona??"Sin datos")}</td><td data-label="Tarifa base">${v.tarifa_base==null?"Sin datos":escapeHtml(pesos.format(v.tarifa_base))}</td><td data-label="Mínimo base">${v.precio_minimo==null?"Sin datos":escapeHtml(pesos.format(v.precio_minimo))}</td><td data-label="Alerta" class="alert-cell ${v.alerta?'critical':''}">${v.alerta?'Requiere atención':'Sin alerta'}</td></tr>`;
 }
 let lastFleetHtml='';
 function renderFleet(){
@@ -1273,7 +1305,7 @@ function renderFleet(){
  const maxSpeed=Math.max(1,...state.vehicles.map(v=>Number(v.velocidad)));
  let title='No hay coincidencias',text='Probá otra patente o cambiá el filtro de estado.';
  if(!state.vehicles.length){title='Tu flota empieza acá';text='Todavía no hay vehículos registrados. Las incorporaciones aparecerán automáticamente.';}
- const html=filtered.length?filtered.map(v=>renderVehicle(v,maxSpeed)).join(''):`<tr><td colspan="5" class="empty"><span class="empty-icon">${icon('search')}</span><strong>${title}</strong><p>${text}</p></td></tr>`;
+ const html=filtered.length?filtered.map(v=>renderVehicle(v,maxSpeed)).join(''):`<tr><td colspan="8" class="empty"><span class="empty-icon">${icon('search')}</span><strong>${title}</strong><p>${text}</p></td></tr>`;
  // Preserve unchanged rows between polls, including keyboard and scroll context.
  if(lastFleetHtml!==html){$('#fleet').innerHTML=html;lastFleetHtml=html;}
  $('#fleet-count').textContent=`${filtered.length} unidades`;
@@ -1283,8 +1315,10 @@ function renderFleet(){
 function updateMetrics(data){
  const values={total:data.resumen.total,moving:data.resumen.en_movimiento,stopped:data.resumen.detenidos,waiting:data.resumen.esperando_viaje,alerts:data.resumen.alertas};
  for(const [id,value] of Object.entries(values)){const el=$(`#${id}`);if(el.textContent!==String(value)){el.textContent=value;el.closest('.metric').classList.remove('changed');void el.offsetWidth;el.closest('.metric').classList.add('changed');}}
- $('#distribution').innerHTML=[['moving','var(--green)'],['stopped','var(--amber)'],['waiting','var(--violet)'],['alerts','var(--red)']].map(([key,color])=>`<span style="width:${values.total?values[key]/values.total*100:0}%;background:${color}"></span>`).join('');
- $('#overview-caption').textContent=values.total?`${values.moving} en movimiento · ${values.waiting} esperando · ${values.alerts} en alerta`:'Sin vehículos registrados';
+ const buckets={moving:0,stopped:0,waiting:0,trip:0,alert:0};
+ for(const v of data.vehiculos)buckets[statusOf(v)]++;
+ $('#distribution').innerHTML=Object.entries(buckets).map(([key,count])=>`<span style="width:${values.total?count/values.total*100:0}%;background:${statuses[key].color}"></span>`).join('');
+ $('#overview-caption').textContent=values.total?`${values.moving} en movimiento · ${buckets.trip} en viaje · ${values.waiting} esperando · ${values.alerts} en alerta`:'Sin vehículos registrados';
 }
 // Schedule after completion and use a timeout to avoid overlapping/stuck requests.
 async function refresh(manual=false){
@@ -1305,7 +1339,7 @@ async function refresh(manual=false){
   state.failures++;const offline=!navigator.onLine;
   setConnection(offline||state.failures>=3?'offline':'error',offline||state.failures>=3?'Desconectado':'Error de conexión');
   $('#error').textContent=`${offline?'El navegador informa que no hay conexión.':'No se pudo consultar el dashboard local.'} ${state.lastSuccess?'Se conservan los últimos datos recibidos; pueden estar desactualizados.':'Todavía no se recibieron datos.'} Reintentando automáticamente. Podés usar Actualizar.`;$('#error').hidden=false;
-  if(state.vehicles===null){$('#fleet').innerHTML='<tr><td colspan="5" class="empty"><strong>Sin datos disponibles</strong><p>Comprobá que el servidor local esté iniciado en 127.0.0.1:8000.</p></td></tr>';$('#fleet').setAttribute('aria-busy','false');$('#fleet-count').textContent='Sin datos';$('#result-count').textContent='Esperando conexión';}
+  if(state.vehicles===null){$('#fleet').innerHTML='<tr><td colspan="8" class="empty"><strong>Sin datos disponibles</strong><p>Comprobá que el servidor local esté iniciado en 127.0.0.1:8000.</p></td></tr>';$('#fleet').setAttribute('aria-busy','false');$('#fleet-count').textContent='Sin datos';$('#result-count').textContent='Esperando conexión';}
  }finally{clearTimeout(timeout);state.busy=false;$('#refresh').disabled=false;$('#refresh').classList.remove('refreshing');state.timer=setTimeout(refresh,2000);}
 }
 $('.filters').addEventListener('submit',event=>event.preventDefault());
@@ -1315,7 +1349,7 @@ window.addEventListener('online',()=>refresh(true));
 // Losing Internet access does not necessarily disconnect the loopback server.
 window.addEventListener('offline',()=>refresh(true));
 // El chat tiene su propio ciclo; sus errores no interrumpen el monitoreo.
-const chat={busy:false,provider:'nube',history:{nube:[],local:[]}};
+const chat={busy:false,provider:'nube',history:{nube:[],local:[],multiagente:[]}};
 const chatMessages=()=>$('#chat-messages-'+chat.provider);
 const chatOpen=document.createElement('button');
 chatOpen.className='button button-assistant';chatOpen.id='chat-open';
@@ -1337,9 +1371,17 @@ function closeFleetAI(){
 }
 chatOpen.addEventListener('click',openFleetAI);fleetLauncher.addEventListener('click',openFleetAI);
 $('#chat-close').addEventListener('click',closeFleetAI);
+$('#chat-maximize').addEventListener('click',()=>{
+ const body=$('.chat-body'),atBottom=body.scrollHeight-body.scrollTop-body.clientHeight<24;
+ const maximized=chatPanel.classList.toggle('is-maximized'),button=$('#chat-maximize');
+ const label=maximized?'Restaurar tamaño de Fleet AI':'Maximizar Fleet AI';
+ button.setAttribute('aria-pressed',String(maximized));button.setAttribute('aria-label',label);button.title=label;
+ if(atBottom)requestAnimationFrame(()=>{body.scrollTop=body.scrollHeight;});
+});
 chatPanel.addEventListener('cancel',event=>{event.preventDefault();closeFleetAI();});
 chatPanel.addEventListener('close',()=>{clearTimeout(closingTimer);chatPanel.classList.remove('is-closing');chatOpen.setAttribute('aria-expanded','false');fleetLauncher.setAttribute('aria-expanded','false');fleetLauncher.hidden=false;chatOpener.focus();});
 const fleetWelcome='¡Hola! 👋 Soy Fleet AI, tu copiloto inteligente.\n\nPuedo ayudarte a analizar la flota, identificar anomalías y responder preguntas sobre tus vehículos.\n\n¿Qué te gustaría consultar?';
+const negotiationPrompt='Negociá un vehículo para el viaje configurado, buscando un buen precio y cercanía al retiro';
 const quickActions=[
  ['Resumen de la flota actual','Resumí el estado actual de la flota','activity','var(--green)'],
  ['Vehículos detenidos','Mostrá los vehículos detenidos de la flota','pause','var(--amber)'],
@@ -1349,11 +1391,58 @@ const quickActions=[
 ];
 for(const [label,prompt,symbol,color] of quickActions){
  const button=document.createElement('button');button.type='button';button.dataset.prompt=prompt;
- button.innerHTML='<span class="quick-icon" style="--accent:'+color+'">'+icon(symbol)+'</span><span>'+label+'</span><span class="quick-chevron" aria-hidden="true">›</span>';
+ button.innerHTML='<span class="quick-icon" style="--accent:'+color+'">'+icon(symbol)+'</span><span>'+label+'</span>';
  if(label==='Generar reporte')button.title='Resumen del estado actual en el chat';
  if(label==='Historial de un vehículo')button.title='Consultar disponibilidad; el sistema no almacena historial de vehículos';
  $('#chat-suggestions').append(button);
 }
+const pesos=new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0});
+let scenarioReady=false,scenarioInitialized=false,scenarioRequest=0;
+function updateScenarioButton(){
+ $('#scenario-start').disabled=chat.busy||!scenarioReady;
+ $('#scenario-start').textContent=chat.busy?'Negociando…':'Iniciar negociación';
+}
+function scenarioStatus(text){
+ $('#scenario-status').textContent=text;$('#scenario-status').hidden=!text;
+}
+function readScenario(){
+ const budget=$('#scenario-budget');
+ if(!budget.reportValidity())throw new Error('Ingresá un presupuesto entero válido.');
+ const solicitud={origen:$('#scenario-origin').value,destino:$('#scenario-destination').value,presupuesto:Number(budget.value)};
+ if(!solicitud.origen||!solicitud.destino)throw new Error('Primero cargá las zonas del escenario.');
+ if(solicitud.origen===solicitud.destino)throw new Error('Elegí un origen y un destino distintos.');
+ if(!Number.isInteger(solicitud.presupuesto))throw new Error('Usá un presupuesto entero.');
+ return solicitud;
+}
+function scenarioSummary(){
+ $('#scenario-summary').textContent='Viaje ficticio · '+$('#scenario-origin').value+' → '+$('#scenario-destination').value+' · Hasta '+pesos.format(Number($('#scenario-budget').value)||0);
+}
+async function loadScenario(){
+ const request=++scenarioRequest;scenarioReady=false;
+ updateScenarioButton();scenarioStatus('Cargando viaje…');
+ const query=scenarioInitialized?'?'+new URLSearchParams({origen:$('#scenario-origin').value,destino:$('#scenario-destination').value}):'';
+ const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),7000);
+ try{
+  const response=await fetch('/api/escenario-negociacion'+query,{cache:'no-store',signal:controller.signal});
+  if(!response.headers.get('content-type')?.includes('application/json'))throw new Error('Reiniciá el dashboard para cargar la API del escenario ficticio.');
+  const data=await response.json();if(request!==scenarioRequest)return;
+  if(!response.ok)throw new Error(data.error||'No se pudo consultar el escenario.');
+  if(!scenarioInitialized){
+   for(const [selector,key] of [['#scenario-origin','origen'],['#scenario-destination','destino']]){
+    const select=$(selector);select.replaceChildren();
+    for(const zona of data.zonas){const option=document.createElement('option');option.value=zona;option.textContent=zona;select.append(option);}
+    select.value=data.solicitud_inicial[key];
+   }
+   $('#scenario-budget').value=data.solicitud_inicial.presupuesto;$('#scenario-budget').max=data.max_presupuesto;scenarioInitialized=true;
+  }
+  scenarioSummary();scenarioReady=true;
+  scenarioStatus('');
+ }catch(error){if(request===scenarioRequest)scenarioStatus(error.name==='AbortError'?'El viaje tardó demasiado en cargar. Cambiá de modo y volvé a intentarlo.':error.message);}
+ finally{clearTimeout(timeout);if(request===scenarioRequest)updateScenarioButton();}
+}
+$('#scenario-start').addEventListener('click',()=>sendChat(negotiationPrompt));
+for(const id of ['#scenario-origin','#scenario-destination'])$(id).addEventListener('change',loadScenario);
+$('#scenario-budget').addEventListener('input',scenarioSummary);
 function addChatMessage(role,text){
  const message=document.createElement('div'),label=document.createElement('strong'),content=document.createElement('span');
  message.className='chat-message';message.dataset.role=role;
@@ -1381,26 +1470,37 @@ function addConfirmation(message,proposal){
 async function sendChat(message,confirmation=null){
  message=message.trim();if(chat.busy||!message)return;
  if(message.length>1000){$('#chat-status').textContent='Usá hasta 1000 caracteres.';return;}
- chat.busy=true;chatPanel.dataset.busy='true';addChatMessage('usuario',message);$('#chat-input').value='';
- $('#chat-status').textContent=confirmation?'Procesando operación…':chat.provider==='local'?'Consultando a Ollama… La primera carga puede tardar hasta 2 minutos.':'Consultando a Gemini…';$('#chat-status').dataset.error='false';
+ let solicitud;
+ if(chat.provider==='multiagente'&&!confirmation){
+  try{if(!scenarioReady)throw new Error('Revisá el escenario del viaje antes de negociar.');solicitud=readScenario();}
+  catch(error){$('#chat-status').textContent=error.message;$('#scenario-settings').open=true;return;}
+  $('#scenario-settings').open=false;
+ }
+ $('#chat-quick-actions').open=false;
+ chat.busy=true;chatPanel.dataset.busy='true';addChatMessage('usuario',message+(solicitud?'\nViaje ficticio: '+solicitud.origen+' → '+solicitud.destino+' · Hasta '+pesos.format(solicitud.presupuesto):''));$('#chat-input').value='';
+ $('#chat-status').textContent=confirmation?'Procesando operación…':chat.provider==='multiagente'?'Negociando con Gemini y Gemma… Hasta tres rondas; puede demorar hasta 7 minutos.':chat.provider==='local'?'Consultando a Ollama… La primera carga puede tardar hasta 2 minutos.':'Consultando a Gemini…';$('#chat-status').dataset.error='false';
  chatMessages().setAttribute('aria-busy','true');$('#chat-provider').disabled=true;
- for(const button of document.querySelectorAll('#chat-send,#chat-suggestions button,#chat-panel .chat-message button'))button.disabled=true;
- const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),chat.provider==='local'?150000:45000);
+ for(const button of document.querySelectorAll('#chat-send,#chat-suggestions button,#chat-panel .chat-message button,#scenario-settings input,#scenario-settings select,#scenario-settings button'))button.disabled=true;
+ updateScenarioButton();
+ const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),chat.provider==='multiagente'?450000:chat.provider==='local'?150000:45000);
  try{
-  const response=await fetch('/api/asistente',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(confirmation||{mensaje:message,historial:chat.history[chat.provider],proveedor:chat.provider}),signal:controller.signal});
+  const response=await fetch('/api/asistente',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(confirmation||{mensaje:message,historial:chat.history[chat.provider],proveedor:chat.provider,...(solicitud?{solicitud}:{})}),signal:controller.signal});
   const data=await response.json();
   if(!response.ok)throw new Error(data.error||'No se pudo consultar el asistente.');
   if(typeof data.respuesta!=='string')throw new Error('El asistente no devolvió una respuesta válida.');
   const node=addChatMessage('asistente',data.respuesta);addConfirmation(node,data.propuesta);
   if(!confirmation)chat.history[chat.provider]=[...chat.history[chat.provider],message].slice(-4);
-  $('#chat-status').textContent=data.propuesta?'Pendiente de confirmación. Todavía no se modificó la flota.':confirmation?'Operación procesada.':'Respuesta basada en una nueva consulta de la flota.';
+  const negotiationStates={acuerdo:'Acuerdo alcanzado · Confirmá la asignación',sin_acuerdo:'Negociación finalizada sin acuerdo',sin_candidatos:'Sin vehículos disponibles',incompleta:'Negociación incompleta',flota_cambio:'La flota cambió · Repetí la negociación',no_aplica:'Revisá las condiciones del viaje ficticio'};
+  $('#chat-status').textContent=confirmation?'Operación procesada.':data.propuesta?'Pendiente de confirmación. Todavía no se modificó la flota.':chat.provider==='multiagente'?(negotiationStates[data.estado]||'Selección finalizada'):'Respuesta basada en una nueva consulta de la flota.';
+  $('#chat-status').dataset.error=String(['incompleta','flota_cambio'].includes(data.estado));
   if(confirmation)refresh(true);
  }catch(error){
   $('#chat-status').dataset.error='true';
   $('#chat-status').textContent=error.name==='AbortError'?(confirmation?'No se pudo recibir el resultado. Consultá la flota antes de repetir la operación.':'La consulta tardó demasiado. Podés intentar nuevamente.'):error instanceof TypeError?(confirmation?'No se recibió el resultado. Consultá la flota antes de repetir la operación.':'No se pudo conectar con el asistente local.'):error.message;
  }finally{
   clearTimeout(timeout);chat.busy=false;chatPanel.dataset.busy='false';chatMessages().setAttribute('aria-busy','false');$('#chat-provider').disabled=false;
-  for(const button of document.querySelectorAll('#chat-send,#chat-suggestions button,#chat-panel .chat-message button'))button.disabled=Boolean(button.closest('.chat-confirm')?.dataset.used);
+  for(const button of document.querySelectorAll('#chat-send,#chat-suggestions button,#chat-panel .chat-message button,#scenario-settings input,#scenario-settings select,#scenario-settings button'))button.disabled=Boolean(button.closest('.chat-confirm')?.dataset.used);
+  updateScenarioButton();
   if($('#chat-panel').open)$('#chat-input').focus();
  }
 }
@@ -1410,12 +1510,20 @@ $('#chat-suggestions').addEventListener('click',event=>{const button=event.targe
 $('#chat-provider').addEventListener('change',()=>{
  if(chat.busy){$('#chat-provider').value=chat.provider;return;}
  chat.provider=$('#chat-provider').value;
+ $('#scenario-settings').hidden=chat.provider!=='multiagente';
+ if(chat.provider==='multiagente')loadScenario();
  $('#chat-input').value='';
- $('#chat-messages-nube').hidden=chat.provider!=='nube';$('#chat-messages-local').hidden=chat.provider!=='local';
- $('#chat-mode').textContent=chat.provider==='local'?'OLLAMA · GEMMA 3 4B · LOCAL':'GEMINI · NUBE';
- $('#chat-note').textContent=chat.provider==='local'?'Tus pedidos se procesan en este equipo con Ollama y gemma3:4b. El historial local no se comparte con Gemini. Cada cambio requiere tu confirmación.':'Las consultas y los datos actuales de la flota se envían a Gemini. No incluyas secretos. Cada cambio requiere tu confirmación.';
+ for(const provider of Object.keys(chat.history))$('#chat-messages-'+provider).hidden=chat.provider!==provider;
+ $('#chat-quick-actions').hidden=chat.provider==='multiagente';
+ $('#chat-mode').textContent=chat.provider==='multiagente'?'GEMINI + GEMMA · MULTIAGENTE':chat.provider==='local'?'OLLAMA · GEMMA 3 4B · LOCAL':'GEMINI · NUBE';
+ $('#chat-note').textContent=chat.provider==='multiagente'?'Este modo usa Gemini en la nube y Gemma en este equipo. El pedido, los candidatos y el diálogo se envían a ambos modelos. Tiene su propia conversación. Los acuerdos generan una asignación que requiere tu confirmación.':chat.provider==='local'?'Tus pedidos se procesan en este equipo con Ollama y gemma3:4b. El historial local no se comparte con Gemini. Cada cambio requiere tu confirmación.':'Las consultas y los datos actuales de la flota se envían a Gemini. No incluyas secretos. Cada cambio requiere tu confirmación.';
  $('#chat-status').textContent='';$('#chat-status').dataset.error='false';
- if(!chatMessages().children.length)addChatMessage('asistente',fleetWelcome);
+ if(chat.provider!=='multiagente'&&!chatMessages().children.length)addChatMessage('asistente',fleetWelcome);
+ $('#chat-quick-actions').open=!chatMessages().querySelector('[data-role="usuario"]');
+ if(chat.provider==='multiagente'&&!chatMessages().querySelector('[data-role="usuario"]')){
+  $('#scenario-settings').open=true;
+  if(chatPanel.open)$('#scenario-settings').scrollIntoView({block:'nearest'});
+ }
  $('#chat-input').focus();
 });
 addChatMessage('asistente',fleetWelcome);

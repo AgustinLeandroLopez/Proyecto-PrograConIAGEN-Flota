@@ -112,6 +112,48 @@ class ServidorMCPTest(unittest.IsolatedAsyncioTestCase):
             with conectar() as conexion:
                 conexion.execute("DELETE FROM vehiculos WHERE patente = ?", (patente,))
 
+    async def test_zona_y_precios_persisten_y_se_consultan_por_mcp(self):
+        async with Client(mcp, raise_exceptions=True) as cliente:
+            alta = await cliente.call_tool('agregar_vehiculo', {
+                'patente': 'TAR123', 'velocidad': 0, 'minutos_detenido': 5,
+                'zona': 'Oeste', 'tarifa_base': 9000, 'precio_minimo': 6500,
+            })
+            unidad = obtener_resultado_estructurado(alta)
+            self.assertEqual(unidad['zona'], 'Oeste')
+            cambio = await cliente.call_tool('actualizar_estado_vehiculo', {
+                'vehiculo_id': unidad['id'], 'velocidad': 0, 'minutos_detenido': 5,
+                'zona': 'Sur', 'tarifa_base': 9500, 'precio_minimo': 7000,
+            })
+            self.assertFalse(cambio.is_error)
+            consulta = await cliente.call_tool('consultar_estado_vehiculo', {'vehiculo_id': unidad['id']})
+            actual = obtener_resultado_estructurado(consulta)
+            self.assertEqual((actual['zona'],actual['tarifa_base'],actual['precio_minimo']),('Sur',9500,7000))
+            invalido = await cliente.call_tool('actualizar_estado_vehiculo', {
+                'vehiculo_id': unidad['id'], 'velocidad': 0, 'minutos_detenido': 5,
+                'tarifa_base': 2000,
+            })
+            self.assertTrue(invalido.is_error)
+            self.assertEqual(database.consultar_vehiculo(unidad['id'])['tarifa_base'],9500)
+
+    async def test_en_viaje_y_retorno_a_disponible_por_mcp(self):
+        async with Client(mcp, raise_exceptions=True) as cliente:
+            cambio = await cliente.call_tool('actualizar_estado_vehiculo', {
+                'vehiculo_id': 1, 'velocidad': 0, 'minutos_detenido': 0, 'en_viaje': True,
+            })
+            self.assertFalse(cambio.is_error)
+            consulta = await cliente.call_tool('consultar_estado_vehiculo', {'vehiculo_id':1})
+            unidad = obtener_resultado_estructurado(consulta)
+            self.assertTrue(unidad['en_viaje'])
+            self.assertFalse(unidad['esperando_viaje'])
+            self.assertIn('en viaje', unidad['estado'])
+            await cliente.call_tool('actualizar_estado_vehiculo', {
+                'vehiculo_id': 1, 'velocidad': 0, 'minutos_detenido': 0, 'esperando_viaje': True,
+            })
+            consulta = await cliente.call_tool('consultar_estado_vehiculo', {'vehiculo_id':1})
+            unidad = obtener_resultado_estructurado(consulta)
+            self.assertFalse(unidad['en_viaje'])
+            self.assertTrue(unidad['esperando_viaje'])
+
     async def test_consultar_vehiculo_inexistente(self):
         async with Client(mcp, raise_exceptions=True) as cliente:
             resultado = await cliente.call_tool(
@@ -209,6 +251,7 @@ class ServidorMCPTest(unittest.IsolatedAsyncioTestCase):
                 )
                 vehiculo = obtener_resultado_estructurado(fuera_de_espera)
                 self.assertFalse(vehiculo["esperando_viaje"])
+                self.assertFalse(vehiculo["en_viaje"])
                 self.assertIn("ALERTA", vehiculo["estado"])
             finally:
                 await cliente.call_tool(

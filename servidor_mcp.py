@@ -7,6 +7,7 @@ from pydantic import Field
 
 from database import inicializar_base_de_datos
 from skills_flota import invocar
+from acciones_flota import CAMPOS
 
 
 mcp = MCPServer(
@@ -91,12 +92,17 @@ def agregar_vehiculo(
         bool,
         Field(description="Indica si esta disponible y esperando la asignacion de un viaje"),
     ] = False,
+    zona: Annotated[str, Field(description="Zona ficticia: Centro, Norte, Sur u Oeste")] = "Centro",
+    tarifa_base: Annotated[int, Field(ge=1, le=1000000, description="Tarifa base en pesos ficticios")] = 4000,
+    precio_minimo: Annotated[int, Field(ge=1, le=1000000, description="Mínimo base, no mayor que tarifa_base")] = 3000,
+    en_viaje: Annotated[bool, Field(description="Unidad con un viaje activo, incompatible con esperando_viaje")] = False,
 ) -> dict[str, int | float | str | bool]:
     """Agrega un vehiculo nuevo a la flota y devuelve su estado inicial."""
     return ejecutar_skill("gestionar_vehiculos", {
         "operacion": "agregar", "patentes": [], "ids": [],
         "cambios": {"patente": patente.strip().upper(), "velocidad": velocidad,
-                    "minutos_detenido": minutos_detenido, "esperando_viaje": esperando_viaje},
+                    "minutos_detenido": minutos_detenido, "esperando_viaje": esperando_viaje,
+                    "zona": zona, "tarifa_base": tarifa_base, "precio_minimo": precio_minimo, "en_viaje": en_viaje},
     })["vehiculo"]
 
 
@@ -125,12 +131,17 @@ def actualizar_estado_vehiculo(
             )
         ),
     ] = None,
+    zona: Annotated[str | None, Field(description="Zona ficticia; omitida conserva la actual")] = None,
+    tarifa_base: Annotated[int | None, Field(ge=1, le=1000000, description="Tarifa base; omitida conserva la actual")] = None,
+    precio_minimo: Annotated[int | None, Field(ge=1, le=1000000, description="Mínimo base; omitido conserva el actual")] = None,
+    en_viaje: Annotated[bool | None, Field(description="Activa/finaliza un viaje; omitido conserva el actual salvo que vuelva a esperar")] = None,
 ) -> dict[str, int | float | str | bool]:
     """Actualiza la velocidad y los minutos detenido de un vehiculo existente."""
     return ejecutar_skill("gestionar_vehiculos", {
         "operacion": "actualizar", "patentes": [], "ids": [vehiculo_id],
         "cambios": {"patente": None, "velocidad": velocidad,
-                    "minutos_detenido": minutos_detenido, "esperando_viaje": esperando_viaje},
+                    "minutos_detenido": minutos_detenido, "esperando_viaje": esperando_viaje,
+                    "zona": zona, "tarifa_base": tarifa_base, "precio_minimo": precio_minimo, "en_viaje": en_viaje},
     })["vehiculo"]
 
 
@@ -147,7 +158,7 @@ def eliminar_vehiculo(
     """Elimina la unidad solicitada explícitamente y verifica que ya no exista."""
     return ejecutar_skill("eliminar_vehiculo", {
         "operacion": "eliminar", "patentes": [], "ids": [vehiculo_id],
-        "cambios": dict.fromkeys(("patente", "velocidad", "minutos_detenido", "esperando_viaje")),
+        "cambios": dict.fromkeys(CAMPOS),
     })
 
 

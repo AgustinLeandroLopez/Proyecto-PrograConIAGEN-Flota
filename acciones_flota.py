@@ -6,8 +6,10 @@ import time
 
 import database
 from monitor import normalizar_esperando_viaje, obtener_estado
+from escenario_flota import CONFIGURACION_INICIAL, ZONAS, MAX_PRESUPUESTO, validar_configuracion
 
-CAMPOS = ("patente", "velocidad", "minutos_detenido", "esperando_viaje")
+CAMPOS_ESTADO = ("patente", "velocidad", "minutos_detenido", "esperando_viaje")
+CAMPOS = (*CAMPOS_ESTADO, "zona", "tarifa_base", "precio_minimo", "en_viaje")
 PENDIENTES = {}
 LOCK = threading.Lock()
 TTL = 300
@@ -15,7 +17,8 @@ MAX_PENDIENTES = 100
 
 
 def validar_campos(campos, *, patente_estricta=True):
-    if not isinstance(campos, dict) or set(campos) != set(CAMPOS):
+    if (not isinstance(campos, dict) or not set(CAMPOS_ESTADO) <= set(campos)
+            or set(campos) - set(CAMPOS)):
         raise ValueError("No se pudieron interpretar los datos. Indicá patente, velocidad, minutos detenido y espera.")
     valores = {k: v for k, v in campos.items() if v is not None}
     if "patente" in valores:
@@ -34,13 +37,25 @@ def validar_campos(campos, *, patente_estricta=True):
             raise ValueError("Los minutos detenido deben ser un entero igual o mayor que 0 dentro del rango admitido.")
     if "esperando_viaje" in valores and type(valores["esperando_viaje"]) is not bool:
         raise ValueError("La espera de viaje debe ser verdadero o falso.")
+    if "en_viaje" in valores and type(valores["en_viaje"]) is not bool:
+        raise ValueError("En viaje debe ser verdadero o falso.")
+    if valores.get("en_viaje") is True and valores.get("esperando_viaje") is True:
+        raise ValueError("Una unidad no puede estar en viaje y esperando viaje a la vez.")
+    if "zona" in valores and valores["zona"] not in ZONAS:
+        raise ValueError("La zona debe ser Centro, Norte, Sur u Oeste.")
+    for campo in ("tarifa_base", "precio_minimo"):
+        if campo in valores and (type(valores[campo]) is not int or not 1 <= valores[campo] <= MAX_PRESUPUESTO):
+            raise ValueError("Las tarifas y mínimos base deben ser enteros de 1 a 1000000 pesos ficticios.")
     return valores
 
 
 def describir(vehiculo):
     return (f"{vehiculo['patente']}: {vehiculo['velocidad']:g} km/h, "
             f"{vehiculo['minutos_detenido']} min detenido, "
-            f"esperando viaje: {'sí' if vehiculo['esperando_viaje'] else 'no'}.")
+            f"esperando viaje: {'sí' if vehiculo['esperando_viaje'] else 'no'}; "
+            f"en viaje: {'sí' if vehiculo['en_viaje'] else 'no'}. "
+            f"Zona ficticia: {vehiculo['zona']}; tarifa base: ${vehiculo['tarifa_base']}; "
+            f"precio mínimo base: ${vehiculo['precio_minimo']}.")
 
 
 def construir_cambio(plan, vehiculos, *, patente_estricta=True):
@@ -54,7 +69,7 @@ def construir_cambio(plan, vehiculos, *, patente_estricta=True):
             raise ValueError("Para agregar usá la patente nueva en los datos, sin seleccionar otra unidad.")
         if not all(k in cambios for k in ("patente", "velocidad", "minutos_detenido")):
             raise ValueError("Para agregar indicá patente, velocidad y minutos detenido. Ejemplo: agregá XYZ123 a 0 km/h, detenido 0 minutos, esperando viaje.")
-        nuevo = {"esperando_viaje": False, **cambios}
+        nuevo = {"esperando_viaje": False, "en_viaje": False, **CONFIGURACION_INICIAL, **cambios}
     else:
         if len(plan["ids"]) > 1 or len(plan["patentes"]) > 1 or not (plan["ids"] or plan["patentes"]):
             raise ValueError("Indicá una sola patente o identificador por operación.")
@@ -73,6 +88,11 @@ def construir_cambio(plan, vehiculos, *, patente_estricta=True):
                 raise ValueError("Indicá qué querés actualizar: patente, velocidad, minutos detenido o espera de viaje.")
             nuevo = {k: anterior[k] for k in CAMPOS} | cambios
     if nuevo is not None:
+        if cambios.get("en_viaje") is True:
+            nuevo["esperando_viaje"] = False
+        elif cambios.get("esperando_viaje") is True:
+            nuevo["en_viaje"] = False
+        validar_configuracion(nuevo["zona"], nuevo["tarifa_base"], nuevo["precio_minimo"])
         nuevo["esperando_viaje"] = normalizar_esperando_viaje(nuevo["velocidad"], nuevo["esperando_viaje"])
         if any(v["patente"].casefold() == nuevo["patente"].casefold()
                and (anterior is None or v["id"] != anterior["id"]) for v in vehiculos):

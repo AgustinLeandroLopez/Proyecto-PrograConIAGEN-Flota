@@ -2,6 +2,7 @@
 from dataclasses import dataclass
 import math
 from typing import Callable
+from escenario_flota import ZONAS, MAX_PRESUPUESTO
 
 
 SELECCION = {
@@ -15,6 +16,10 @@ CAMBIOS = {
         "velocidad": {"type": ["number", "null"], "minimum": 0},
         "minutos_detenido": {"type": ["integer", "null"], "minimum": 0, "maximum": 9223372036854775807},
         "esperando_viaje": {"type": ["boolean", "null"]},
+        "en_viaje": {"type": ["boolean", "null"]},
+        "zona": {"type": ["string", "null"], "enum": [*ZONAS, None]},
+        "tarifa_base": {"type": ["integer", "null"], "minimum": 1, "maximum": MAX_PRESUPUESTO},
+        "precio_minimo": {"type": ["integer", "null"], "minimum": 1, "maximum": MAX_PRESUPUESTO},
     },
     "required": ["patente", "velocidad", "minutos_detenido", "esperando_viaje"],
 }
@@ -27,6 +32,10 @@ VEHICULO = {
         "minutos_detenido": {"type": "integer", "minimum": 0},
         "esperando_viaje": {"type": "boolean"}, "estado": {"type": "string"},
         "alerta": {"type": "boolean"},
+        "en_viaje": {"type": "boolean"},
+        "zona": {"type": "string", "enum": list(ZONAS)},
+        "tarifa_base": {"type": "integer", "minimum": 1, "maximum": MAX_PRESUPUESTO},
+        "precio_minimo": {"type": "integer", "minimum": 1, "maximum": MAX_PRESUPUESTO},
     },
 }
 RESUMEN = {

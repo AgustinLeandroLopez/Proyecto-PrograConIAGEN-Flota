@@ -103,6 +103,7 @@ class SkillsTest(BaseTemporal):
         with patch('skills_flota.consultar.obtener_snapshot', return_value={
             'vehiculos': [{'id': 1, 'patente': 'AAA123', 'velocidad': 0,
                            'minutos_detenido': 0, 'esperando_viaje': False,
+                           'zona': 'Centro', 'tarifa_base': 4000, 'precio_minimo': 3000,
                            'alerta': False, 'estado': 'estado', 'extra': 'no permitido'}],
             'limite_minutos_detenido': 30,
         }):

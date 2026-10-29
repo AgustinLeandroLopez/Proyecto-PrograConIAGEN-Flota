@@ -2,7 +2,7 @@
 from .contratos import Skill, entrada
 from .herramientas import obtener_snapshot, resumir
 
-OPERACIONES = ("resumen", "alertas", "esperando", "movimiento", "detenidos", "vehiculos", "reglas", "sin_datos")
+OPERACIONES = ("resumen", "alertas", "esperando", "movimiento", "detenidos", "vehiculos", "reglas", "sin_datos", "viajes")
 MAX_RESPUESTA = 6000
 
 
@@ -19,14 +19,16 @@ def ejecutar(argumentos, canal):
             aviso = "Alguna de las unidades solicitadas no está registrada.\n"
     resumen = resumir(vehiculos)
     filtros = {"alertas": lambda v: v["alerta"], "esperando": lambda v: v["esperando_viaje"],
+               "viajes": lambda v: v.get("en_viaje", False),
                "movimiento": lambda v: v["velocidad"] > 0,
                "detenidos": lambda v: v["velocidad"] == 0 and not v["alerta"] and not v["esperando_viaje"]}
     elegidos = [v for v in vehiculos if filtros.get(operacion, lambda v: True)(v)]
     if operacion == "sin_datos":
-        texto = "El monitor solo dispone del estado actual: no tiene ubicaciones, viajes asignados, causas de detención ni historial."
+        texto = "El monitor dispone del estado actual, si está en viaje, zona y tarifas base; no tiene ubicaciones reales (GPS), detalles históricos de viajes, causas de detención ni historial."
     elif operacion == "reglas":
         texto = (f"Hay alerta con velocidad 0 y más de {snapshot['limite_minutos_detenido']} minutos detenido, excepto si espera viaje. "
                  "Esperando viaje implica velocidad 0 y no genera alerta. Al moverse deja de esperar viaje. "
+                 "En viaje indica una unidad asignada; no está disponible. Volver a esperar finaliza esa asignación. "
                  "La patente es única; velocidad y minutos detenido no pueden ser negativos.")
     elif operacion == "resumen":
         texto = (f"Flota actual: {resumen['total']} vehículos; {resumen['en_movimiento']} en movimiento, "
@@ -37,7 +39,8 @@ def ejecutar(argumentos, canal):
         texto = "Estado actual:\n"
         for indice, v in enumerate(elegidos):
             linea = (f"{v['patente']} (unidad {v['id']}): {v['velocidad']:g} km/h, "
-                     f"{v['minutos_detenido']} min detenido. {v['estado']}\n")
+                     f"{v['minutos_detenido']} min detenido. {v['estado']}. "
+                     f"Zona ficticia: {v['zona']}; tarifa base: ${v['tarifa_base']}; mínimo base: ${v['precio_minimo']}\n")
             if len(aviso) + len(texto) + len(linea) > MAX_RESPUESTA - 100:
                 texto += f"Quedan {len(elegidos) - indice} unidades sin mostrar. Consultá por una unidad específica."
                 break

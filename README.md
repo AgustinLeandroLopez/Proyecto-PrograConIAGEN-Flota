@@ -31,6 +31,9 @@ Repositorio: [AgustinLeandroLopez/Proyecto-PrograConIAGEN-Flota](https://github.
 - `skills_flota/`: paquete reutilizable con las Skills `consultar_flota`, `gestionar_vehiculos` y `eliminar_vehiculo`, contratos y registro de ejecución.
 - `prompt_agente.py`: contrato e instrucciones compartidos por los dos modelos.
 - `ollama_client.py`: transporte local para Ollama con `gemma3:4b`.
+- `multiagente.py`: negociación entre Gemini y Gemma, con asignación confirmable, con validación de unidad, precio y límites económicos, hasta tres rondas.
+- `escenario_flota.py`: zonas, distancias, tarifas y mínimos ficticios para negociar un viaje con presupuesto.
+- `test_multiagente.py`: pruebas aisladas de negociación, contratos de transporte y API HTTP.
 - `.codex/config.toml`: configura el servidor MCP local para Codex.
 - `flota.db`: se genera automáticamente la primera vez que se ejecuta el programa.
 
@@ -65,8 +68,8 @@ El servidor publica estas herramientas:
 - `consultar_vehiculos`: devuelve toda la flota, el estado calculado y si cada vehículo espera viaje.
 - `consultar_estado_vehiculo`: consulta un vehículo por su identificador.
 - `consultar_alertas`: devuelve los vehículos detenidos más de 30 minutos que no esperan viaje.
-- `agregar_vehiculo`: incorpora un vehículo nuevo e incluye opcionalmente `esperando_viaje`.
-- `actualizar_estado_vehiculo`: modifica velocidad, minutos detenido y `esperando_viaje` de un vehículo. Velocidad y minutos siguen siendo obligatorios.
+- `agregar_vehiculo`: incorpora una unidad y admite `esperando_viaje`, `zona`, `tarifa_base` y `precio_minimo` opcionales.
+- `actualizar_estado_vehiculo`: modifica velocidad y minutos, que siguen siendo obligatorios, y admite espera, zona, tarifa y mínimo base opcionales. Conserva los opcionales omitidos.
 - `eliminar_vehiculo`: elimina una unidad por identificador y verifica que ya no exista.
 
 `esperando_viaje` es un estado persistente para un vehículo detenido y disponible. Puede tener cualquier cantidad de minutos detenido sin generar una alerta. Si se actualiza con velocidad mayor que 0, el estado se desactiva automáticamente. Las bases existentes se actualizan en el inicio: se agrega la columna con valor `false` sin eliminar vehículos.
@@ -99,6 +102,19 @@ El frontend sigue contenido en `dashboard/index.html`, con secciones para estilo
 
 ## Pruebas
 
+Para ejecutar toda la suite de pruebas unitarias y de integración:
+
+```powershell
+python -m unittest discover -v
+```
+
+`test_monitor.py` verifica el límite de alerta a los 29, 30 y 31 minutos,
+la excepción de espera de viaje, el movimiento y la flota vacía, sin acceder
+a SQLite. Estas pruebas y ejemplos representativos en `test_escenario_flota.py`
+y `test_acciones_flota.py` señalan las fases AAA: **Arrange** (preparar),
+**Act** (ejecutar) y **Assert** (comprobar). El ejemplo de cambio concurrente
+también verifica la excepción esperada y que no se sobrescriban los datos.
+
 ```powershell
 python -m unittest -v test_asistente.py
 ```
@@ -114,6 +130,27 @@ python -m unittest -v test_servidor_mcp.py
 El botón **Asistente de flota** abre un chat lateral (pantalla completa en celulares), con sugerencias, envío con Enter, cierre con botón o Escape e indicador de consulta en curso. Sus errores no detienen la sincronización del dashboard. El navegador solo llama a `POST /api/asistente`; la clave permanece en Python.
 
 El selector permite elegir **Asistente IA en la nube · Gemini** o **Asistente IA local · Gemma 3 4B**. Ambos reutilizan las mismas Skills de consulta, gestión y baja, con iguales validaciones y confirmaciones. Solo cambia el intérprete del pedido. La opción inicial es nube y las conversaciones se conservan por separado en memoria: cambiar de modo no envía el historial local a Gemini. El selector se bloquea mientras una solicitud está en curso.
+
+Para cambiar una unidad a **Esperando viaje**, escribí «Poné ABC123 en Esperando viaje» (usando su patente real), revisá la propuesta y pulsá **Confirmar cambio**. También admite «¿Podés poner la unidad 2 en Esperando viaje?». Se propone velocidad 0 y se conservan los minutos detenido si no pediste cambiarlos. Si no identificás la unidad, el asistente debe pedir patente o ID. Este cambio se realiza desde nube o local; la selección multiagente solo recomienda.
+
+También ofrece **Selección multiagente · Gemini + Gemma**, con conversación e historial propios. Negocia vehículo y precio: Gemini representa al cliente y busca buen precio y cercanía al retiro; Gemma representa a la flota y defiende su precio mínimo. Pueden ofertar, contraproponer, aceptar o retirarse en hasta tres rondas. Solo participan unidades esperando viaje. Python valida presupuesto, mínimo, precio de referencia y disponibilidad. Al acordar prepara una propuesta para marcar la unidad En viaje; requiere Confirmar cambio antes de modificarla.
+
+Para probarlo:
+
+1. Configurar Gemini como se explica abajo y abrir Ollama con `gemma3:4b` instalado.
+2. Iniciar o reiniciar el dashboard con `python dashboard.py` y recargar la página.
+3. Elegir **Selección multiagente** y abrir **Viaje ficticio**: seleccionar retiro, destino y presupuesto máximo. Los campos definen el viaje: para cambiar esas condiciones, usar el formulario.
+4. Pulsar **Iniciar negociación** dentro del cuadro del viaje, sin escribir un mensaje adicional. El chat muestra ofertas, contrapropuestas y resultado. También admite escribir «Negociá un vehículo para este viaje». Sin unidades esperando viaje, informa que no hay candidatos sin llamar a modelos. Para crear disponibilidad de demostración, usar deliberadamente nube o local y confirmar la propuesta.
+
+Cada unidad tiene `zona`, `tarifa_base` y `precio_minimo` guardados en SQLite y visibles en las columnas **Zona ficticia**, **Tarifa base** y **Mínimo base** de la tabla principal y en las tarjetas móviles. Al reiniciar `python dashboard.py`, la migración agrega los campos sin borrar vehículos y conserva los perfiles anteriores una sola vez. Las ediciones posteriores sobreviven a los reinicios. Nuevas altas sin esos datos usan Centro, base 4000 y mínimo base 3000.
+
+Para editarlos, elegir nube o local y pedir «Actualizá ABC123 a zona Sur, tarifa base 6000 y mínimo base 4500». Revisar la propuesta y pulsar **Confirmar cambio**. Se conservan velocidad, minutos, espera y cualquier campo omitido. Zonas admitidas: Centro, Norte, Sur y Oeste. Importes enteros de 1 a 1000000; mínimo base no mayor que tarifa base. Estos datos siguen siendo ficticios; no son GPS ni tarifas reales.
+
+La negociación consulta esos valores guardados y calcula por ruta: referencia = tarifa base + km de viaje × 800 + km al retiro × 400; mínimo total = mínimo base + km totales × 300. **Mínimo base** en la tabla es el valor guardado; el mínimo que evalúa Gemma incluye el recorrido. Las distancias y fórmulas están en `escenario_flota.py`. El viaje inicial es Centro → Norte con presupuesto 9000. Se pueden probar presupuestos bajos para explorar negociaciones sin acuerdo.
+
+El pedido, historial propio, candidatos y diálogo se envían a ambos modelos. El contexto estructurado de Gemini incluye presupuesto; el de Gemma incluye mínimos. Ambos límites son visibles al operador para la demo y pueden aparecer en el texto del usuario. No se comparten historiales de los modos individuales. Ante errores se conserva el diálogo previo y se informa negociación incompleta, sin fallback ni reintentos. La espera del navegador es 450 segundos para hasta seis llamadas; cada llamada mantiene su timeout. Si la flota cambia, hay que repetir. Capacidad, horarios y ubicaciones reales no se admiten. El reconocimiento del alcance depende del modelo; Python verifica que aceptar copie la última unidad y precio ofrecidos y respete ambos límites.
+
+Las intervenciones visibles se construyen desde decisiones JSON y datos verificados, sin mostrar prosa libre. El precio es ficticio y no se cobra. Tras confirmar, la unidad pasa a En viaje y deja de estar disponible. Para liberarla, pedí «Dejá ABC123 esperando viaje» y confirmá el cambio. Dos modelos no garantizan el mejor precio ni un acuerdo; se demuestra el intercambio entre roles con objetivos distintos.
 
 ### Opción local con Ollama
 
@@ -194,7 +231,7 @@ Para una comprobación real, configurar la clave y probar las tres sugerencias, 
 Pruebas con bases temporales y Gemini simulado, sin modificar la flota local ni consumir cuota:
 
 ```powershell
-python -m unittest -v test_configuracion.py test_asistente.py test_acciones_flota.py test_servidor_mcp.py test_skills_flota.py test_ollama_client.py
+python -m unittest -v test_configuracion.py test_asistente.py test_acciones_flota.py test_servidor_mcp.py test_skills_flota.py test_ollama_client.py test_multiagente.py test_escenario_flota.py test_datos_persistentes.py test_asignacion_viaje.py test_monitor.py
 ```
 
 ### Fleet AI

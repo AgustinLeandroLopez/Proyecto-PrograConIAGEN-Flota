@@ -2,7 +2,8 @@ LIMITE_MINUTOS_DETENIDO = 30
 
 
 def esta_esperando_viaje(vehiculo):
-    return bool(vehiculo.get("esperando_viaje", False)) and vehiculo["velocidad"] == 0
+    return (bool(vehiculo.get("esperando_viaje", False)) and not vehiculo.get("en_viaje", False)
+            and vehiculo["velocidad"] == 0)
 
 
 def normalizar_esperando_viaje(velocidad, esperando_viaje):
@@ -25,6 +26,9 @@ def obtener_estado(vehiculo):
 
     if esta_en_alerta(vehiculo):
         return "ALERTA: El vehiculo lleva demasiado tiempo detenido."
+
+    if vehiculo.get("en_viaje", False):
+        return "El vehículo está en viaje."
 
     if vehiculo["velocidad"] == 0:
         return "El vehiculo esta detenido, pero dentro del tiempo permitido."

@@ -14,6 +14,13 @@ MAX_RESPONSE_BYTES = 32768
 
 
 def interpretar(consulta, historial, datos):
+    return generar_json(instrucciones(), SCHEMA, {
+        "consulta": consulta, "historial_usuario": historial, "estado_actual": datos,
+    })
+
+
+def generar_json(sistema, esquema, datos):
+    """Transporte compartido; cada rol conserva su propio contrato y contexto."""
     clave = os.environ.get("GEMINI_API_KEY", "").strip()
     if not clave:
         raise ErrorGemini("Falta configurar GEMINI_API_KEY en .env o en el entorno del servidor. Consultá el README para habilitar el asistente.")
@@ -21,12 +28,10 @@ def interpretar(consulta, historial, datos):
     if not re.fullmatch(r"[a-zA-Z0-9._-]{1,100}", modelo):
         raise ErrorGemini("GEMINI_MODEL no es válido. Revisá la configuración del servidor.")
     payload = {
-        "systemInstruction": {"parts": [{"text": instrucciones()}]},
-        "contents": [{"role": "user", "parts": [{"text": json.dumps({
-            "consulta": consulta, "historial_usuario": historial, "estado_actual": datos,
-        }, ensure_ascii=False)}]}],
+        "systemInstruction": {"parts": [{"text": sistema}]},
+        "contents": [{"role": "user", "parts": [{"text": json.dumps(datos, ensure_ascii=False)}]}],
         "generationConfig": {"temperature": 0, "maxOutputTokens": 1024,
-                             "responseMimeType": "application/json", "responseSchema": SCHEMA},
+                             "responseMimeType": "application/json", "responseSchema": esquema},
     }
     request = Request(
         f"https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent",
