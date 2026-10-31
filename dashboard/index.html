@@ -381,6 +381,43 @@ main {
   color:var(--accent);
   flex-shrink:0;
 }
+/* Hover effects only for a precise pointer; transforms preserve the grid layout. */
+@media (hover:hover) and (pointer:fine) {
+  .metric {
+    position:relative;
+    isolation:isolate;
+    transition:transform 280ms cubic-bezier(.2,.65,.3,1),
+      border-color 280ms ease, box-shadow 280ms ease;
+  }
+  .metric::before {
+    content:"";
+    position:absolute;
+    inset:0;
+    z-index:-1;
+    border-radius:inherit;
+    pointer-events:none;
+    background:radial-gradient(ellipse at top right,
+      color-mix(in srgb,var(--accent) 9%,transparent),transparent 75%);
+    opacity:0;
+    transition:opacity 280ms ease;
+  }
+  .metric-icon {
+    transition:transform 280ms cubic-bezier(.2,.65,.3,1);
+  }
+  .metric:hover {
+    transform:translateY(-7px) scale(1.02);
+    border-color:color-mix(in srgb,var(--accent) 45%,var(--line));
+    box-shadow:0 12px 24px -10px #0009,
+      0 0 18px -6px color-mix(in srgb,var(--accent) 25%,transparent),
+      inset 0 0 16px color-mix(in srgb,var(--accent) 4%,transparent);
+  }
+  .metric:hover::before {
+    opacity:1;
+  }
+  .metric:hover .metric-icon {
+    transform:translateY(-2px) scale(1.06);
+  }
+}
 .metric-value {
   font-size:32px;
   font-weight:650;
@@ -550,9 +587,88 @@ td {
 tbody tr:last-child td {
   border-bottom:0;
 }
-tbody tr:hover {
-  background:#172133;
+.vehicle-row {
+  cursor:pointer;
+  transition:background-color 220ms ease,box-shadow 220ms ease;
 }
+.vehicle-row td:first-child {
+  transition:box-shadow 220ms ease;
+}
+.vehicle-row .badge {
+  transition:box-shadow 220ms ease,border-color 220ms ease;
+}
+.vehicle-row:focus-within {
+  background:#172133;
+  box-shadow:inset 0 1px #ffffff08,inset 0 -8px 14px -12px #000b;
+}
+.vehicle-row:focus-within td:first-child {
+  box-shadow:inset 3px 0 var(--row-accent,var(--cyan));
+}
+.vehicle-row:focus-within .badge {
+  border-color:color-mix(in srgb,var(--badge) 40%,transparent);
+  box-shadow:0 0 12px -4px color-mix(in srgb,var(--badge) 30%,transparent);
+}
+.row-action {
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  margin-left:12px;
+  padding:7px 9px;
+  border:1px solid var(--line);
+  border-radius:8px;
+  background:var(--surface);
+  color:var(--cyan);
+  font:inherit;
+  cursor:pointer;
+  transition:opacity 220ms ease,border-color 220ms ease;
+}
+.row-action:focus-visible {
+  outline:2px solid var(--cyan);
+  outline-offset:3px;
+}
+.row-action[aria-expanded="true"] {
+  border-color:var(--cyan);
+}
+.row-chevron {
+  display:inline-block;
+  transition:transform 220ms ease;
+}
+.row-action[aria-expanded="true"] .row-chevron {
+  transform:rotate(180deg);
+}
+@media (hover:hover) and (pointer:fine) {
+  .vehicle-row .row-action {opacity:0;}
+  .vehicle-row:hover .row-action,.vehicle-row:focus-within .row-action,
+  .vehicle-row .row-action[aria-expanded="true"] {opacity:1;}
+  .vehicle-row:hover {
+    background:#172133;
+    box-shadow:inset 0 1px #ffffff08,inset 0 -8px 14px -12px #000b;
+  }
+  .vehicle-row:hover td:first-child {
+    box-shadow:inset 3px 0 var(--row-accent,var(--cyan));
+  }
+  .vehicle-row:hover .badge {
+    border-color:color-mix(in srgb,var(--badge) 40%,transparent);
+    box-shadow:0 0 12px -4px color-mix(in srgb,var(--badge) 30%,transparent);
+  }
+}
+.vehicle-detail[hidden] {display:none;}
+.vehicle-detail > td {
+  padding:16px 20px;
+  background:#101d2b;
+  box-shadow:inset 3px 0 var(--row-accent,var(--cyan));
+  white-space:normal;
+}
+.detail-heading {font-size:13px;margin-bottom:12px;}
+.vehicle-facts {
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+  gap:14px 20px;
+  margin:0;
+}
+.vehicle-facts dt {font-size:12px;color:var(--muted);margin-bottom:4px;}
+.vehicle-facts dd {margin:0;font-size:13px;overflow-wrap:anywhere;}
+.detail-note {margin-top:14px;font-size:12px;color:var(--muted);}
 tbody tr.recent {
   background:#12313c;
   box-shadow:inset 3px 0 var(--cyan);
@@ -620,6 +736,7 @@ tbody tr.recent {
   height:100%;
   background:var(--cyan);
   border-radius:4px;
+  transition:width 240ms ease;
 }
 .alert-cell {
   color:var(--muted);
@@ -1051,6 +1168,23 @@ tbody tr.recent {
   .speed-track {
     width:80px;
   }
+  .vehicle-row td:last-child {
+    flex-wrap:wrap;
+  }
+  .vehicle-row .row-action {
+    margin-left:auto;
+    opacity:1;
+  }
+  .vehicle-detail {
+    display:block;
+    padding:0;
+    border-top:0;
+  }
+  .vehicle-detail > td {
+    display:block;
+    padding:16px;
+  }
+  .vehicle-detail > td::before {display:none;}
   td.empty {
     grid-column:1/-1;
     padding:20px;
@@ -1078,6 +1212,10 @@ tbody tr.recent {
   html {
     scroll-behavior:auto;
   }
+  .metric:hover,.metric:hover .metric-icon {
+    transform:none;
+  }
+  .row-action[aria-expanded="true"] .row-chevron {transform:none;}
   *,*::before {
     animation:none!important;
     transition:none!important;
@@ -1154,11 +1292,10 @@ tbody tr.recent {
 .chat-form textarea::placeholder {color:var(--muted);opacity:1;}
 .chat-form button {align-self:flex-end;display:grid;place-items:center;width:38px;height:38px;border:1px solid #71e9ff;border-radius:10px;background:linear-gradient(135deg,#30dbf2,#079fc3);color:#062335;}
 .chat-form button svg {width:20px;height:20px;}
-.chat-hint {padding:0 18px 14px;color:var(--muted);font-size:10px;}
 .chat-confirm {display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;white-space:normal;}
 .chat-message .button {min-height:40px;}
-@media(max-width:600px) {.chat-panel {inset:8px;width:calc(100% - 16px);height:calc(100dvh - 16px);border-radius:16px;}.header-actions {flex-wrap:wrap;}.fleet-launcher {right:12px;bottom:10px;}.fleet-launcher .fleet-mascot {width:64px;height:74px;}.fleet-launcher-label {font-size:11px;}.chat-hint {padding-bottom:max(12px,env(safe-area-inset-bottom));}}
-@media(max-height:650px) {.chat-head {padding:8px 12px;}.chat-head .fleet-mascot {width:44px;height:48px;}.chat-note {max-height:52px;overflow:auto;}.chat-service {margin-top:2px;}.chat-hint {display:none;}}
+@media(max-width:600px) {.chat-panel {inset:8px;width:calc(100% - 16px);height:calc(100dvh - 16px);border-radius:16px;}.header-actions {flex-wrap:wrap;}.fleet-launcher {right:12px;bottom:10px;}.fleet-launcher .fleet-mascot {width:64px;height:74px;}.fleet-launcher-label {font-size:11px;}.chat-form {margin-bottom:max(12px,env(safe-area-inset-bottom));}}
+@media(max-height:650px) {.chat-head {padding:8px 12px;}.chat-head .fleet-mascot {width:44px;height:48px;}.chat-note {max-height:52px;overflow:auto;}.chat-service {margin-top:2px;}}
 @media(prefers-reduced-motion:reduce) {.fleet-mascot .robot,.fleet-mascot .eyes,.chat-panel[open],.chat-panel[data-busy="true"] .chat-head .eyes,.chat-panel[data-busy="true"] .chat-status::before {animation:none;}.fleet-launcher .fleet-mascot,.chat-panel.is-closing,.chat-suggestions button {transition:none;}}
 </style></head><body>
 <a class="skip" href="#dashboard">Saltar al contenido</a>
@@ -1219,12 +1356,12 @@ tbody tr.recent {
 <form class="filters" role="search"><div class="search"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg><label class="sr-only" for="search">Buscar por patente</label><input id="search" type="search" placeholder="Buscar patente…" autocomplete="off"></div><label class="sr-only" for="status">Filtrar por estado</label><select id="status"><option value="all">Todos los estados</option><option value="moving">En movimiento</option><option value="stopped">Detenidos</option><option value="waiting">Esperando viaje</option><option value="trip">En viaje</option><option value="alert">En alerta</option></select><label class="sr-only" for="sort">Ordenar vehículos</label><select id="sort"><option value="plate">Patente: A–Z</option><option value="speed-desc">Velocidad: mayor primero</option><option value="speed-asc">Velocidad: menor primero</option><option value="state">Estado: prioridad</option></select></form>
 <div class="table-scroll"><table aria-label="Estado operativo de vehículos"><thead><tr><th scope="col">Vehículo / patente</th><th scope="col">Estado operativo</th><th scope="col">Velocidad</th><th scope="col">Detenido</th><th scope="col">Zona</th><th scope="col">Tarifa base</th><th scope="col">Mínimo base</th><th scope="col">Alerta</th></tr></thead><tbody id="fleet" aria-busy="true"><tr><td colspan="8" class="empty"><span class="sr-only">Cargando flota</span><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></td></tr></tbody></table></div><div class="table-footer"><span id="result-count" role="status">Consultando vehículos…</span><span>Actualización automática cada 2 s</span></div></section>
 <div class="activity-column"><section class="panel activity-panel" id="actividad" aria-labelledby="activity-title"><div class="panel-header"><h2 id="activity-title">Actividad reciente</h2><span class="live-label"><span class="dot"></span>SESIÓN</span></div><p class="activity-note">Cambios observados mientras esta página está abierta.</p><ol class="event-list" id="events"></ol><div id="activity-empty" class="empty activity-empty"><span class="empty-icon"><svg class="icon"><use href="#i-activity"/></svg></span><strong>Todo listo para monitorear</strong><p>Las incorporaciones y cambios de estado aparecerán aquí al detectarse.</p></div><div class="activity-footer" id="activity-status" role="status">Esperando la primera consulta</div></section></div></div>
-<footer class="page-footer"><span>Monitor de flota / Datos locales · Asistente en nube o local</span><span id="footer-sync">La conexión se verifica en cada consulta</span></footer></main></div>
+<footer class="page-footer" id="footer-sync" hidden></footer></main></div>
 <button class="fleet-launcher" id="fleet-launcher" type="button" aria-label="Abrir Fleet AI, tu asistente de operaciones" aria-controls="chat-panel" aria-expanded="false"><span class="fleet-launcher-label">¿Necesitás ayuda?</span><svg class="fleet-mascot" aria-hidden="true"><use href="#fleet-robot"/></svg></button>
 <dialog class="chat-panel" id="chat-panel" aria-labelledby="chat-title" aria-describedby="chat-subtitle">
  <div class="chat-head"><svg class="fleet-mascot" aria-hidden="true"><use href="#fleet-robot"/></svg><div><h2 id="chat-title">Fleet AI</h2><p class="chat-subtitle" id="chat-subtitle">Tu asistente de operaciones</p><p class="chat-service">Disponibilidad del modelo sin comprobar</p></div><div class="chat-window-actions"><button class="chat-window-button" id="chat-maximize" type="button" aria-label="Maximizar Fleet AI" title="Maximizar Fleet AI" aria-controls="chat-panel" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect class="maximize-icon" x="4" y="4" width="16" height="16" rx="2"/><g class="restore-icon"><path d="M8 8V4h12v12h-4"/><rect x="4" y="8" width="12" height="12" rx="1"/></g></svg></button><button class="chat-window-button chat-close" id="chat-close" type="button" aria-label="Cerrar asistente" title="Cerrar asistente">&times;</button></div></div>
  <label class="chat-provider" for="chat-provider"><span id="chat-mode">GEMINI · NUBE</span><select id="chat-provider"><option value="nube">Asistente IA en la nube · Gemini</option><option value="local">Asistente IA local · Gemma 3 4B</option><option value="multiagente">Selección multiagente · Gemini + Gemma</option></select></label>
- <p class="chat-note" id="chat-note">Las consultas y los datos actuales de la flota se envían a Gemini. No incluyas secretos. Cada cambio requiere tu confirmación.</p>
+ <p class="chat-note" id="chat-note" hidden></p>
  <div class="chat-body">
   <details class="scenario" id="scenario-settings" hidden open>
    <summary id="scenario-summary">Viaje ficticio · Configurar</summary>
@@ -1246,7 +1383,6 @@ tbody tr.recent {
  </details>
  <p class="chat-status" id="chat-status" role="status"></p>
  <form class="chat-form" id="chat-form"><label class="sr-only" for="chat-input">Consulta o pedido sobre la flota</label><textarea id="chat-input" name="mensaje" rows="2" maxlength="1000" required placeholder="Preguntame algo sobre tu flota..."></textarea><button id="chat-send" type="submit" aria-label="Enviar mensaje"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m4 12 16-8-6 16-3-7-7-1Zm7 1 9-9"/></svg></button></form>
- <p class="chat-hint">Enter para enviar · Shift+Enter para una nueva línea</p>
 </dialog>
 <script>
 // HTTP and MCP share SQLite. The connection indicator checks HTTP health.
@@ -1258,7 +1394,7 @@ const statuses = {moving:{label:'En movimiento',color:'var(--green)',priority:4}
 function escapeHtml(value){const el=document.createElement('span');el.textContent=String(value);return el.innerHTML;}
 function icon(name){return `<svg class="icon" aria-hidden="true"><use href="#i-${name}"/></svg>`;}
 function statusOf(v){return v.alerta?'alert':v.en_viaje?'trip':v.esperando_viaje?'waiting':Number(v.velocidad)>0?'moving':'stopped';}
-function setConnection(mode,label){$('#connection').dataset.state=mode;$('#connection-label').textContent=label;$('#footer-sync').textContent=['error','offline'].includes(mode)?'Datos sin actualizar · Reintento automático cada 2 s':'Sincronización local · Consulta cada 2 s';}
+function setConnection(mode,label){$('#connection').dataset.state=mode;$('#connection-label').textContent=label;const failed=['error','offline'].includes(mode);$('#footer-sync').textContent=failed?'Datos sin actualizar · Reintento automático cada 2 s':'';$('#footer-sync').hidden=!failed;}
 // Session observations, not a backend audit trail. Tool attribution is inferred.
 function observeChanges(vehicles){
  const now=Date.now();
@@ -1291,11 +1427,45 @@ function renderActivity(){
  if(lastActivityHtml!==html){$('#events').innerHTML=html;lastActivityHtml=html;}
  $('#activity-status').textContent=state.events.length?`${state.events.length} eventos observados · Hasta 50 por sesión`:'Esperando cambios en la flota';
 }
+const expandedVehicles=new Set();
+function escapeAttribute(value){return escapeHtml(value).replace(/"/g,'&quot;');}
 function renderVehicle(v,maxSpeed){
  const status=statuses[statusOf(v)],recent=(state.recent.get(v.id)||0)>Date.now();
- return `<tr class="${recent?'recent':''}"><td><div class="vehicle"><span class="vehicle-icon">${icon('truck')}</span><div><strong>${escapeHtml(v.patente)}</strong><small>Unidad ${escapeHtml(v.id)}${recent?' · Actualizada':''}</small></div></div></td><td><span class="badge" style="--badge:${status.color}"><span class="dot"></span>${status.label}</span></td><td data-label="Velocidad"><span class="speed-number">${escapeHtml(v.velocidad)} <small>km/h</small></span><div class="speed-track" title="Velocidad relativa a la mayor velocidad actual de la flota"><span style="width:${Math.max(0,Math.min(100,Number(v.velocidad)/maxSpeed*100))}%"></span></div></td><td data-label="Tiempo detenido"><span class="speed-number">${escapeHtml(v.minutos_detenido)} <span class="muted">min</span></span></td><td data-label="Zona">${escapeHtml(v.zona??"Sin datos")}</td><td data-label="Tarifa base">${v.tarifa_base==null?"Sin datos":escapeHtml(pesos.format(v.tarifa_base))}</td><td data-label="Mínimo base">${v.precio_minimo==null?"Sin datos":escapeHtml(pesos.format(v.precio_minimo))}</td><td data-label="Alerta" class="alert-cell ${v.alerta?'critical':''}">${v.alerta?'Requiere atención':'Sin alerta'}</td></tr>`;
+ const id=escapeAttribute(v.id),expanded=expandedVehicles.has(String(v.id));
+ return `<tr data-fleet-key="vehicle-${id}" data-vehicle-id="${id}" class="vehicle-row ${recent?'recent':''}" style="--row-accent:${status.color}"><td><div class="vehicle"><span class="vehicle-icon">${icon('truck')}</span><div><strong>${escapeHtml(v.patente)}</strong><small>Unidad ${id}${recent?' · Actualizada':''}</small></div></div></td><td><span class="badge" style="--badge:${status.color}"><span class="dot"></span>${status.label}</span></td><td data-label="Velocidad"><span class="speed-number">${escapeHtml(v.velocidad)} <small>km/h</small></span><div class="speed-track" aria-hidden="true" title="Velocidad relativa a la mayor velocidad actual de la flota"><span style="width:${Math.max(0,Math.min(100,Number(v.velocidad)/maxSpeed*100))}%"></span></div></td><td data-label="Tiempo detenido"><span class="speed-number">${escapeHtml(v.minutos_detenido)} <span class="muted">min</span></span></td><td data-label="Zona">${escapeHtml(v.zona??"Sin datos")}</td><td data-label="Tarifa base">${v.tarifa_base==null?"Sin datos":escapeHtml(pesos.format(v.tarifa_base))}</td><td data-label="Mínimo base">${v.precio_minimo==null?"Sin datos":escapeHtml(pesos.format(v.precio_minimo))}</td><td data-label="Alerta" class="alert-cell ${v.alerta?'critical':''}"><span>${v.alerta?'Requiere atención':'Sin alerta'}</span><button type="button" class="row-action" aria-expanded="${expanded}" aria-controls="detail-${id}" aria-label="${expanded?'Ocultar':'Ver'} detalle de ${escapeAttribute(v.patente)}"><span>${expanded?'Ocultar':'Ver'} detalle</span><span class="row-chevron" aria-hidden="true">⌄</span></button></td></tr>${renderVehicleDetail(v,status,expanded)}`;
 }
-let lastFleetHtml='';
+function renderVehicleDetail(v,status,expanded){
+ const id=escapeAttribute(v.id);
+ const facts=[['Unidad',v.id],['Patente',v.patente],['Estado operativo',status.label],['Velocidad',`${v.velocidad} km/h`],['Tiempo detenido',`${v.minutos_detenido} min`],['Esperando viaje',v.esperando_viaje?'Sí':'No'],['En viaje',v.en_viaje?'Sí':'No'],['Zona ficticia',v.zona??'Sin datos'],['Tarifa base',v.tarifa_base==null?'Sin datos':pesos.format(v.tarifa_base)],['Mínimo base',v.precio_minimo==null?'Sin datos':pesos.format(v.precio_minimo)],['Alerta',v.alerta?'Requiere atención':'Sin alerta']];
+ return `<tr data-fleet-key="detail-${id}" class="vehicle-detail" style="--row-accent:${status.color}"${expanded?'':' hidden'}><td colspan="8"><section id="detail-${id}" aria-labelledby="detail-title-${id}"><h3 class="detail-heading" id="detail-title-${id}">Detalle de ${escapeHtml(v.patente)}</h3><dl class="vehicle-facts">${facts.map(([label,value])=>`<div><dt>${label}</dt><dd>${escapeHtml(value)}</dd></div>`).join('')}</dl><p class="detail-note">Datos de la última sincronización · Zonas y precios ficticios. La barra de velocidad es relativa al máximo actual de la flota; no representa un límite permitido.</p></section></td></tr>`;
+}
+// Patch existing nodes so polling preserves focus, text selection and bar transitions.
+function patchFleetNode(current,next){
+ if(current.nodeType!==next.nodeType||current.nodeName!==next.nodeName){current.replaceWith(next.cloneNode(true));return;}
+ if(current.nodeType===Node.TEXT_NODE){if(current.data!==next.data)current.data=next.data;return;}
+ for(const attr of [...current.attributes])if(!next.hasAttribute(attr.name))current.removeAttribute(attr.name);
+ for(const attr of next.attributes)if(current.getAttribute(attr.name)!==attr.value)current.setAttribute(attr.name,attr.value);
+ const children=[...current.childNodes],incoming=[...next.childNodes];
+ incoming.forEach((child,index)=>{if(children[index])patchFleetNode(children[index],child);else current.append(child.cloneNode(true));});
+ children.slice(incoming.length).forEach(child=>child.remove());
+}
+function reconcileFleet(html){
+ const body=$('#fleet'),template=document.createElement('template');
+ template.innerHTML=html;
+ const rows=new Map([...body.children].map(row=>[row.dataset.fleetKey,row]));
+ const wanted=new Set([...template.content.children].map(row=>row.dataset.fleetKey));
+ const focused=document.activeElement;
+ // Remove obsolete rows first to avoid moving stable rows on deletions.
+ for(const row of [...body.children])if(!row.dataset.fleetKey||!wanted.has(row.dataset.fleetKey))row.remove();
+ [...template.content.children].forEach((next,index)=>{
+  const current=rows.get(next.dataset.fleetKey);
+  const row=current||next;
+  if(current)patchFleetNode(current,next);
+  if(body.children[index]!==row)body.insertBefore(row,body.children[index]||null);
+ });
+ // Moving a focused row during sorting can blur its button in some browsers.
+ if(focused?.isConnected&&body.contains(focused)&&document.activeElement!==focused)focused.focus({preventScroll:true});
+}
 function renderFleet(){
  if(state.vehicles===null)return;
  const query=$('#search').value.trim().toLocaleLowerCase('es-AR'),filter=$('#status').value;
@@ -1305,9 +1475,10 @@ function renderFleet(){
  const maxSpeed=Math.max(1,...state.vehicles.map(v=>Number(v.velocidad)));
  let title='No hay coincidencias',text='Probá otra patente o cambiá el filtro de estado.';
  if(!state.vehicles.length){title='Tu flota empieza acá';text='Todavía no hay vehículos registrados. Las incorporaciones aparecerán automáticamente.';}
- const html=filtered.length?filtered.map(v=>renderVehicle(v,maxSpeed)).join(''):`<tr><td colspan="8" class="empty"><span class="empty-icon">${icon('search')}</span><strong>${title}</strong><p>${text}</p></td></tr>`;
- // Preserve unchanged rows between polls, including keyboard and scroll context.
- if(lastFleetHtml!==html){$('#fleet').innerHTML=html;lastFleetHtml=html;}
+ const liveIds=new Set(state.vehicles.map(v=>String(v.id)));
+ for(const id of expandedVehicles)if(!liveIds.has(id))expandedVehicles.delete(id);
+ const html=filtered.length?filtered.map(v=>renderVehicle(v,maxSpeed)).join(''):`<tr data-fleet-key="empty"><td colspan="8" class="empty"><span class="empty-icon">${icon('search')}</span><strong>${title}</strong><p>${text}</p></td></tr>`;
+ reconcileFleet(html);
  $('#fleet-count').textContent=`${filtered.length} unidades`;
  $('#result-count').textContent=`Mostrando ${filtered.length} de ${state.vehicles.length} vehículos`;
  $('#fleet').setAttribute('aria-busy','false');
@@ -1343,6 +1514,15 @@ async function refresh(manual=false){
  }finally{clearTimeout(timeout);state.busy=false;$('#refresh').disabled=false;$('#refresh').classList.remove('refreshing');state.timer=setTimeout(refresh,2000);}
 }
 $('.filters').addEventListener('submit',event=>event.preventDefault());
+$('#fleet').addEventListener('click',event=>{
+ const row=event.target.closest('.vehicle-row');
+ if(!row)return;
+ // Let text selection and any future links/controls keep their own interaction.
+ if(!event.target.closest('.row-action')&&(event.target.closest('a,button,input,select,textarea')||window.getSelection()?.toString()))return;
+ const id=row.dataset.vehicleId;
+ if(expandedVehicles.has(id))expandedVehicles.delete(id);else expandedVehicles.add(id);
+ renderFleet();
+});
 $('#refresh').addEventListener('click',()=>refresh(true));
 $('#search').addEventListener('input',renderFleet);$('#status').addEventListener('change',renderFleet);$('#sort').addEventListener('change',renderFleet);
 window.addEventListener('online',()=>refresh(true));
@@ -1516,7 +1696,8 @@ $('#chat-provider').addEventListener('change',()=>{
  for(const provider of Object.keys(chat.history))$('#chat-messages-'+provider).hidden=chat.provider!==provider;
  $('#chat-quick-actions').hidden=chat.provider==='multiagente';
  $('#chat-mode').textContent=chat.provider==='multiagente'?'GEMINI + GEMMA · MULTIAGENTE':chat.provider==='local'?'OLLAMA · GEMMA 3 4B · LOCAL':'GEMINI · NUBE';
- $('#chat-note').textContent=chat.provider==='multiagente'?'Este modo usa Gemini en la nube y Gemma en este equipo. El pedido, los candidatos y el diálogo se envían a ambos modelos. Tiene su propia conversación. Los acuerdos generan una asignación que requiere tu confirmación.':chat.provider==='local'?'Tus pedidos se procesan en este equipo con Ollama y gemma3:4b. El historial local no se comparte con Gemini. Cada cambio requiere tu confirmación.':'Las consultas y los datos actuales de la flota se envían a Gemini. No incluyas secretos. Cada cambio requiere tu confirmación.';
+ $('#chat-note').textContent=chat.provider==='multiagente'?'Este modo usa Gemini en la nube y Gemma en este equipo. El pedido, los candidatos y el diálogo se envían a ambos modelos. Tiene su propia conversación. Los acuerdos generan una asignación que requiere tu confirmación.':'';
+ $('#chat-note').hidden=chat.provider!=='multiagente';
  $('#chat-status').textContent='';$('#chat-status').dataset.error='false';
  if(chat.provider!=='multiagente'&&!chatMessages().children.length)addChatMessage('asistente',fleetWelcome);
  $('#chat-quick-actions').open=!chatMessages().querySelector('[data-role="usuario"]');

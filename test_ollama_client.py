@@ -47,13 +47,21 @@ class OllamaTransporteTest(unittest.TestCase):
         self.assertIsNone(ollama_client.SinRedireccion().redirect_request(None, None, 302, '', {}, 'https://example.invalid'))
 
     def test_errores_controlados_sin_reintento_ni_cambio_a_nube(self):
+        # Arrange: definir fallos de conexión, timeout y respuestas HTTP 404/500.
         for error in (URLError('private-details'), TimeoutError(),
                       HTTPError('http://local', 404, 'private-details', {}, None),
                       HTTPError('http://local', 500, 'private-details', {}, None)):
             with self.subTest(error=type(error)), patch('ollama_client.build_opener') as construir:
+                # Arrange: simular el fallo al conectar, sin llamar a Ollama real.
                 construir.return_value.open.side_effect = error
+
+                # Act: pedir una interpretación al cliente local.
+                # Assert (excepción): assertRaises verifica que el fallo se
+                # transforme en ErrorAsistente y lo captura para revisar el mensaje.
                 with self.assertRaises(ErrorAsistente) as caught:
                     ollama_client.interpretar('resumen', [], {})
+
+                # Assert: no exponer detalles internos y realizar un solo intento.
                 self.assertNotIn('private-details', str(caught.exception))
                 self.assertEqual(construir.return_value.open.call_count, 1)
 
